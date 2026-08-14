@@ -43,8 +43,8 @@ void Fun4All_UEScaling_Pass2 (
     const int run_number            = 31,
     const int segment               = 0,
     const int jet_flag              = 10,
-    const std::string & embfile     = "CALO_TREE_noNoise_waveformFit_sHijing_0_20fm-00000031-00000.root",
-    const std::string & outfile     = "DST_CALO_CLUSTER_pythia8_Jet10_scaled11perc_sHijing_0_20fm-00000031-00000.root"
+    const std::string & outfile     = "DST_CALO_CLUSTER_pythia8_Jet10_scaled11perc_sHijing_0_20fm-00000031-00000.root",
+    const std::string & embfile     = ""
 )
 {
     
@@ -74,14 +74,32 @@ void Fun4All_UEScaling_Pass2 (
     InputInit();
     InputRegister();
 
-    for ( const auto & DSTTPYE : { "DST_CALO_CLUSTER" , "DST_GLOBAL",  "DST_MBD_EPD", "DST_TRUTH_JET"} )
+    if ( jet_flag < 0 )
     {
-        std::string infile = Form( "%s_pythia8_Jet%d_sHijing_0_20fm-%010d-%06d.root", DSTTPYE, jet_flag, run_number, segment );
-        std::cout << "\tAdding input file: " << infile << std::endl;
-        auto input = new Fun4AllDstInputManager( Form( "DSTINPUT_%s", DSTTPYE ) );
-        input -> AddFile( infile );
-        input -> Verbosity( Enable::VERBOSITY );
-        se -> registerInputManager( input );
+        for ( const auto & DSTTPYE : { "DST_CALO_CLUSTER" , "DST_GLOBAL",  "DST_MBD_EPD" } )
+        {
+            std::string infile = Form( "%s_sHijing_0_20fm-%010d-%06d.root", DSTTPYE, run_number, segment );
+            std::cout << "\tAdding input file: " << infile << std::endl;
+            auto input = new Fun4AllDstInputManager( Form( "DSTINPUT_%s", DSTTPYE ) );
+            input -> AddFile( infile );
+            input -> Verbosity( Enable::VERBOSITY );
+            se -> registerInputManager( input );
+        }
+
+    }
+    else
+    {
+    
+        for ( const auto & DSTTPYE : { "DST_CALO_CLUSTER" , "DST_GLOBAL",  "DST_MBD_EPD", "DST_TRUTH_JET"} )
+        {
+            std::string infile = Form( "%s_pythia8_Jet%d_sHijing_0_20fm-%010d-%06d.root", DSTTPYE, jet_flag, run_number, segment );
+            std::cout << "\tAdding input file: " << infile << std::endl;
+            auto input = new Fun4AllDstInputManager( Form( "DSTINPUT_%s", DSTTPYE ) );
+            input -> AddFile( infile );
+            input -> Verbosity( Enable::VERBOSITY );
+            se -> registerInputManager( input );
+        }
+
     }
 
     InputManagers();
@@ -92,22 +110,30 @@ void Fun4All_UEScaling_Pass2 (
 
     Process_Calo_Calib( ); 
     
-    auto * cm  = new CaloManip( embfile.c_str() );
-    cm -> add_event_header ( "EventHeader" );
-    cm -> add_cemc_node ( "TOWERINFO_CALIB_CEMC" );
-    cm -> add_hcalin_node ( "TOWERINFO_CALIB_HCALIN" );
-    cm -> add_hcalout_node ( "TOWERINFO_CALIB_HCALOUT" );
-    cm -> set_scale_factor ( 1.11 );
-    cm -> Verbosity ( Enable::VERBOSITY  );
-    se -> registerSubsystem( cm );
+    if ( embfile.empty() )
+    {
+        std::cout << "No embedding file provided, skipping CaloManip" << std::endl;
+    }
+    else
+    {
+        std::cout << "Embedding file provided: " << embfile << std::endl;
+        auto * cm  = new CaloManip( embfile.c_str() );
+        cm -> add_event_header ( "EventHeader" );
+        cm -> add_cemc_node ( "TOWERINFO_CALIB_CEMC" );
+        cm -> add_hcalin_node ( "TOWERINFO_CALIB_HCALIN" );
+        cm -> add_hcalout_node ( "TOWERINFO_CALIB_HCALOUT" );
+        cm -> set_scale_factor ( 1.11 );
+        cm -> Verbosity ( Enable::VERBOSITY  );
+        se -> registerSubsystem( cm );
+    }
 
-    auto * rcemc = new RetowerCEMC( ); 
-    rcemc -> set_towerinfo( true );
-    rcemc -> set_frac_cut( 1.0 );
-    rcemc -> set_do_rescale( false );
-    rcemc -> set_towerNodePrefix( HIJETS::tower_prefix );
-    rcemc -> Verbosity( Enable::VERBOSITY );
-    se -> registerSubsystem( rcemc );
+    // auto * rcemc = new RetowerCEMC( ); 
+    // rcemc -> set_towerinfo( true );
+    // rcemc -> set_frac_cut( 1.0 );
+    // rcemc -> set_do_rescale( false );
+    // rcemc -> set_towerNodePrefix( HIJETS::tower_prefix );
+    // rcemc -> Verbosity( Enable::VERBOSITY );
+    // se -> registerSubsystem( rcemc );
 
     auto * out = new Fun4AllDstOutputManager( "DSTOUTPUT", outfile );
     // if these are left then process_calo_calib will overwrite the overlayed enregies

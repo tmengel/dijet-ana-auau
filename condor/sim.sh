@@ -10,10 +10,13 @@ macrodir="/sphenix/user/tmengel/dijet-ana-auau/macros/hijing"
 cd $macrodir || exit 1
 
 SEGMENT="$1"
-NEVENTS=10
+# versionTag="08_14_2026_v001"
+versionTag="$2"
+
+NEVENTS=-1
 RUN_NUM=31
 
-versionTag="08_14_2026_v001"
+
 OUTPUTDIR="/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/$versionTag"
 mkdir -p $OUTPUTDIR
 
@@ -21,6 +24,7 @@ treeoutdir="$OUTPUTDIR/trees"
 mkdir -p $treeoutdir  
 
 dstoutdir="$OUTPUTDIR/dsts"
+mkdir -p $dstoutdir
 
 embfile="${treeoutdir}/CALO_TREE_noNoise_hijing${RUN_NUM}_pass1-$(printf "%05d" "$SEGMENT").root"
 root -l -q -b "Fun4All_UEScaling_Pass1.C(${NEVENTS}, ${RUN_NUM}, ${SEGMENT}, \"${embfile}\", true)"
