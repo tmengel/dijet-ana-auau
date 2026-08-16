@@ -1,2 +1,2 @@
-STORAGE_DIR=/sphenix/tg/tg01/jets/tmengel/jstgtf03
+STORAGE_DIR=/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling
 CATALOG_FILE=catalog.json

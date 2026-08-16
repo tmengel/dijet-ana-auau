@@ -1,7 +1,7 @@
 #/bin/bash
 
 python3 catalog.py 
-python3 make_list.py -d overlay -s hijing_sub1
+# python3 make_list.py -d overlay -s hijing_sub1
 # for js in 30 ; do
 #     for sub in 0 1 ; do
 #         for jetR in 3 4 ; do
