@@ -144,21 +144,65 @@ int AnaTreev1::Init( PHCompositeNode * /*topNode*/ )
         }
     }
 
-    if ( m_calo_nodes.size() > 0 )
+    if ( !m_cemc_node.empty() )
     {
-        m_calo_sumE.resize( m_calo_nodes.size(), 0.0 );
-        m_tower_E.resize( m_calo_nodes.size() , std::vector< float >( k_ieta * k_iphi, 0.0 ) );
-        m_tower_isgood.resize( m_calo_nodes.size() , std::vector< int >( k_ieta * k_iphi, 0 ) );
-        for ( size_t i = 0; i < m_calo_nodes.size(); ++i )
+        m_tree->Branch( "sumeT_cemc", &m_sumeT_cemc, "sumeT_cemc/F" );
+
+        if ( m_save_full_cemc )
         {
-            m_tree -> Branch( Form( "calo_sumE_%s", m_calo_nodes[i].c_str() ), &m_calo_sumE[i], Form( "calo_sumE_%s/F", m_calo_nodes[i].c_str() ) );
-            if ( m_save_full_calo[i] )
-            {
-                m_tree -> Branch( Form( "tower_E_%s", m_calo_nodes[i].c_str() ), &m_tower_E[i] );
-                m_tree -> Branch( Form( "tower_isgood_%s", m_calo_nodes[i].c_str() ), &m_tower_isgood[i] );
-            }
+            m_tree->Branch(
+                "cemc_tower_E",
+                m_cemc_tower_E,
+                "cemc_tower_E[24][64]/F"
+            );
+
+            m_tree->Branch(
+                "cemc_tower_isgood",
+                m_cemc_tower_isgood,
+                "cemc_tower_isgood[24][64]/I"
+            );
         }
-    } 
+    }
+
+    if ( !m_ihcal_node.empty() )
+    {
+        m_tree->Branch( "sumeT_ihcal", &m_sumeT_ihcal, "sumeT_ihcal/F" );
+
+        if ( m_save_full_ihcal )
+        {
+            m_tree->Branch(
+                "ihcal_tower_E",
+                m_ihcal_tower_E,
+                "ihcal_tower_E[24][64]/F"
+            );
+
+            m_tree->Branch(
+                "ihcal_tower_isgood",
+                m_ihcal_tower_isgood,
+                "ihcal_tower_isgood[24][64]/I"
+            );
+        }
+    }
+
+    if ( !m_ohcal_node.empty() )
+    {
+        m_tree->Branch( "sumeT_ohcal", &m_sumeT_ohcal, "sumeT_ohcal/F" );
+
+        if ( m_save_full_ohcal )
+        {
+            m_tree->Branch(
+                "ohcal_tower_E",
+                m_ohcal_tower_E,
+                "ohcal_tower_E[24][64]/F"
+            );
+
+            m_tree->Branch(
+                "ohcal_tower_isgood",
+                m_ohcal_tower_isgood,
+                "ohcal_tower_isgood[24][64]/I"
+            );
+        }
+    }
 
     if ( !m_jet_node.empty() )
     {
@@ -1002,36 +1046,109 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
         m_rho_sigmas[irho] = rho_node->get_sigma();
     }
 
-    for ( size_t icalo = 0; m_calo_nodes.size(); ++icalo )
+    if ( !m_cemc_node.empty() )
     {
-        auto * calo_node = findNode::getClass<TowerInfoContainer>( topNode, m_calo_nodes[icalo] );
-        if ( !calo_node )
+        m_sumeT_cemc = 0.0;
+        if ( m_save_full_cemc )
         {
-            std::cout << PHWHERE << " Input node " << m_calo_nodes[icalo] << " Node missing, doing nothing." << std::endl;
-            return Fun4AllReturnCodes::ABORTRUN; 
+            memset( m_cemc_tower_E, 0, sizeof(m_cemc_tower_E) );
+            memset( m_cemc_tower_isgood, 0, sizeof(m_cemc_tower_isgood) );
         }
-        
-        m_tower_E[icalo].resize( k_ieta * k_iphi, 0.0 );
-        m_tower_isgood[icalo].resize( k_ieta * k_iphi, 0 );
-        m_calo_sumE[icalo] = 0.0;
-        
-        for ( unsigned int ich = 0; ich < calo_node->size(); ich++ ) 
-        {
-            auto tower = calo_node->get_tower_at_channel(ich);
 
-            if ( !tower || ! tower->get_isGood() || std::isnan(tower->get_energy() ) )
+        auto * cemc_node = findNode::getClass<TowerInfoContainer>( topNode, m_cemc_node );
+        if ( !cemc_node )
+        {
+            std::cout << PHWHERE << " Input node " << m_cemc_node << " Node missing, doing nothing." << std::endl;
+            return Fun4AllReturnCodes::ABORTRUN;
+        }
+
+        for ( unsigned int ich = 0; ich < cemc_node->size(); ich++ )
+        {
+            auto tower = cemc_node->get_tower_at_channel(ich);
+            if ( !tower || !tower->get_isGood() || std::isnan(tower->get_energy()) )
             {
                 continue; // skip bad towers
             }
-            unsigned int key = calo_node -> encode_key(ich);
-            int ieta = calo_node -> getTowerEtaBin(key);
-            int iphi = calo_node -> getTowerPhiBin(key);
-            m_tower_E[icalo][ieta*k_iphi + iphi] = tower->get_energy();
-            m_tower_isgood[icalo][ieta*k_iphi + iphi] = 1;
-            m_calo_sumE[icalo] += tower->get_energy();
+            unsigned int key = cemc_node -> encode_key(ich);
+            int ieta = cemc_node -> getTowerEtaBin(key);
+            int iphi = cemc_node -> getTowerPhiBin(key);
+            m_sumeT_cemc += tower->get_energy();
+            if ( m_save_full_cemc )
+            {
+                m_cemc_tower_E[ieta][iphi] = tower->get_energy();
+                m_cemc_tower_isgood[ieta][iphi] = 1;
+            }
+        }
+    }
+
+    if ( !m_ihcal_node.empty() )
+    {
+        m_sumeT_ihcal = 0.0;
+        if ( m_save_full_ihcal )
+        {
+            memset( m_ihcal_tower_E, 0, sizeof(m_ihcal_tower_E) );
+            memset( m_ihcal_tower_isgood, 0, sizeof(m_ihcal_tower_isgood) );
         }
 
+        auto * ihcal_node = findNode::getClass<TowerInfoContainer>( topNode, m_ihcal_node );
+        if ( !ihcal_node )
+        {
+            std::cout << PHWHERE << " Input node " << m_ihcal_node << " Node missing, doing nothing." << std::endl;
+            return Fun4AllReturnCodes::ABORTRUN;
+        }
 
+        for ( unsigned int ich = 0; ich < ihcal_node->size(); ich++ )
+        {
+            auto tower = ihcal_node->get_tower_at_channel(ich);
+            if ( !tower || !tower->get_isGood() || std::isnan(tower->get_energy()) )
+            {
+                continue; // skip bad towers
+            }
+            unsigned int key = ihcal_node -> encode_key(ich);
+            int ieta = ihcal_node -> getTowerEtaBin(key);
+            int iphi = ihcal_node -> getTowerPhiBin(key);
+            m_sumeT_ihcal += tower->get_energy();
+            if ( m_save_full_ihcal )
+            {
+                m_ihcal_tower_E[ieta][iphi] = tower->get_energy();
+                m_ihcal_tower_isgood[ieta][iphi] = 1;
+            }
+        }
+    }
+
+    if ( !m_ohcal_node.empty() )
+    {
+        m_sumeT_ohcal = 0.0;
+        if ( m_save_full_ohcal )
+        {
+            memset( m_ohcal_tower_E, 0, sizeof(m_ohcal_tower_E) );
+            memset( m_ohcal_tower_isgood, 0, sizeof(m_ohcal_tower_isgood) );
+        }
+
+        auto * ohcal_node = findNode::getClass<TowerInfoContainer>( topNode, m_ohcal_node );
+        if ( !ohcal_node )
+        {
+            std::cout << PHWHERE << " Input node " << m_ohcal_node << " Node missing, doing nothing." << std::endl;
+            return Fun4AllReturnCodes::ABORTRUN;
+        }
+
+        for ( unsigned int ich = 0; ich < ohcal_node->size(); ich++ )
+        {
+            auto tower = ohcal_node->get_tower_at_channel(ich);
+            if ( !tower || !tower->get_isGood() || std::isnan(tower->get_energy()) )
+            {
+                continue; // skip bad towers
+            }
+            unsigned int key = ohcal_node -> encode_key(ich);
+            int ieta = ohcal_node -> getTowerEtaBin(key);
+            int iphi = ohcal_node -> getTowerPhiBin(key);
+            m_sumeT_ohcal += tower->get_energy();
+            if ( m_save_full_ohcal )
+            {
+                m_ohcal_tower_E[ieta][iphi] = tower->get_energy();
+                m_ohcal_tower_isgood[ieta][iphi] = 1;
+            }
+        }
     }
 
     

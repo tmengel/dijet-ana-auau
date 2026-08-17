@@ -34,7 +34,7 @@ if [ $EXITCODE -ne 0 ]; then
     exit $EXITCODE
 fi
 
-for jetid in -1 10 20 30 ; do 
+for jetid in 10 20 30 ; do 
 
     if [ $jetid -eq -1 ]; then
 

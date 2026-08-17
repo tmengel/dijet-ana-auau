@@ -69,12 +69,23 @@ class AnaTreev1 : public SubsysReco
 
   void add_jet_node ( const std::string & node ) { m_jet_node = node; }
 
-  void add_calo_node ( const std::string & node  , const bool b = true )
+  void add_cemc_node ( const std::string & node  , const bool b = true )
   {
-    m_calo_nodes.push_back( node );
-    m_save_full_calo.push_back( b );
+    m_cemc_node = node;
+    m_save_full_cemc = b;
   }
-  
+
+  void add_ihcal_node ( const std::string & node  , const bool b = true )
+  {
+    m_ihcal_node = node;
+    m_save_full_ihcal = b;
+  }
+
+  void add_ohcal_node ( const std::string & node  , const bool b = true )
+  {
+    m_ohcal_node = node;
+    m_save_full_ohcal = b;
+  }
 
  private:
     
@@ -134,13 +145,25 @@ class AnaTreev1 : public SubsysReco
   static const int k_iphi = 64;
   const double m_calo_abs_z[3] = {130.23, 170.299, 301.683};
   const double m_calo_r[3] = {93.5, 127.503, 225.87};
-  std::vector< std::string > m_calo_nodes {};
-  std::vector< bool > m_save_full_calo {};
-  std::vector< float > m_calo_sumE {};
-  std::vector< std::vector< float > > m_tower_E {};
-  std::vector< std::vector< int > >   m_tower_isgood {};
-  std::vector<float> SumCaloE( PHCompositeNode *topNode, const std::vector< std::string > &towerinfo_nodes );
+ 
+  std::string  m_cemc_node {""};
+  bool m_save_full_cemc { false };
+  float m_sumeT_cemc {0.0};
+  float m_cemc_tower_E[k_ieta][k_iphi];
+  int m_cemc_tower_isgood[k_ieta][k_iphi];
   
+  std::string  m_ihcal_node {""};
+  bool m_save_full_ihcal { false };
+  float m_sumeT_ihcal {0.0};
+  float m_ihcal_tower_E[k_ieta][k_iphi];
+  int m_ihcal_tower_isgood[k_ieta][k_iphi];
+
+  std::string  m_ohcal_node {""};
+  bool m_save_full_ohcal { false };
+  float m_sumeT_ohcal {0.0};
+  float m_ohcal_tower_E[k_ieta][k_iphi];
+  int m_ohcal_tower_isgood[k_ieta][k_iphi];
+
   // jet info
   std::string m_jet_node { "" };
   float m_jet_R { 0.0 };

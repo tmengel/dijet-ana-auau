@@ -23,14 +23,14 @@ mkdir -p $treeoutdir
 dstoutdir="$OUTPUTDIR/dsts"
 
 embfile="${treeoutdir}/CALO_TREE_noNoise_hijing${RUN_NUM}_pass1-$(printf "%05d" "$SEGMENT").root"
-root -l -q -b "Fun4All_UEScaling_Pass1.C(${NEVENTS}, ${RUN_NUM}, ${SEGMENT}, \"${embfile}\", true)"
-EXITCODE=$?
-if [ $EXITCODE -ne 0 ]; then
-    echo "Error: ${EXITCODE} running Fun4All_UEScaling_Pass1.C"
-    exit $EXITCODE
-fi
+# root -l -q -b "Fun4All_UEScaling_Pass1.C(${NEVENTS}, ${RUN_NUM}, ${SEGMENT}, \"${embfile}\", true)"
+# EXITCODE=$?
+# if [ $EXITCODE -ne 0 ]; then
+    # echo "Error: ${EXITCODE} running Fun4All_UEScaling_Pass1.C"
+    # exit $EXITCODE
+# fi
 
-for jetid in -1 10 20 30 ; do 
+for jetid in 10 ; do 
 
     if [ $jetid -eq -1 ]; then
 

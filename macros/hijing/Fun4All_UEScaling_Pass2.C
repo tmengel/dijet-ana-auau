@@ -44,7 +44,7 @@ void Fun4All_UEScaling_Pass2 (
     const int segment               = 0,
     const int jet_flag              = 10,
     const std::string & outfile     = "DST_CALO_CLUSTER_pythia8_Jet10_scaled11perc_sHijing_0_20fm-00000031-00000.root",
-    const std::string & embfile     = ""
+    const std::string & embfile     = "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_14_2026_v001/CALO_TREE_noNoise_hijing31_pass1-00000.root"
 )
 {
     
@@ -90,7 +90,7 @@ void Fun4All_UEScaling_Pass2 (
     else
     {
     
-        for ( const auto & DSTTPYE : { "DST_CALO_CLUSTER" , "DST_GLOBAL",  "DST_MBD_EPD", "DST_TRUTH_JET"} )
+        for ( const auto & DSTTPYE : { "DST_CALO_CLUSTER" , "DST_GLOBAL",  "DST_MBD_EPD",  "DST_TRUTH_G4HIT" , "DST_TRUTH_JET"})
         {
             std::string infile = Form( "%s_pythia8_Jet%d_sHijing_0_20fm-%010d-%06d.root", DSTTPYE, jet_flag, run_number, segment );
             std::cout << "\tAdding input file: " << infile << std::endl;
