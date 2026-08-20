@@ -27,6 +27,8 @@ int makeplot(
         kOrange + 7
     };
 
+    const double min_pt2 = 10.1;
+
     auto* fin = TFile::Open(inputFile, "READ");
 
     if (!fin || fin->IsZombie())
@@ -86,7 +88,7 @@ int makeplot(
     gPad -> SetBottomMargin(0.15);
 
     hPt[0] -> Draw("HIST");
-    hPt[0] -> GetXaxis() -> SetTitle("p_{T} [GeV]");
+    hPt[0] -> GetXaxis() -> SetTitle("p_{T}^{reco} [GeV]");
     hPt[0] -> GetYaxis() -> SetTitle("#frac{1}{N_{evt}} #frac{dN_{jet}}{dp_{T}} [GeV^{-1}]");
     hPt[0] -> GetXaxis() -> SetRangeUser(5.0, 30.0);
     hPt[0] -> GetYaxis() -> SetRangeUser(1.e-7, 5.0);
@@ -105,6 +107,13 @@ int makeplot(
         hPt[icent] -> Draw("HIST SAME");
     }
 
+    // draw vertical line at min_pt2
+    auto* line = new TLine(min_pt2, 1.e-7, min_pt2, 5.0);
+    line->SetLineColor(kBlack);
+    line->SetLineStyle(2);
+    line->SetLineWidth(2);
+    line->Draw("SAME");
+
     auto * legend = new TLegend(0.75, 0.72, 0.92, 0.87);
     legend -> SetTextSize(0.037);
     legend -> SetBorderSize(0);
@@ -118,6 +127,7 @@ int makeplot(
             "l"
         );
     }
+    legend -> AddEntry(line, Form("p_{T,2}^{min} = %.1f GeV", min_pt2), "l");
     legend -> Draw("SAME");
 
     std::vector<std::string> tags = {
@@ -140,7 +150,7 @@ int makeplot(
     gPad -> SetLogy(0);
 
     hEff[0]->SetTitle("");
-    hEff[0]->GetXaxis()->SetTitle("p_{T} [GeV]");
+    hEff[0]->GetXaxis()->SetTitle("p_{T}^{reco} [GeV]");
     hEff[0]->GetYaxis()->SetTitle("Subleading efficiency");
 
     hEff[0] -> GetXaxis() -> SetRangeUser(5.0, 30.0);
@@ -161,13 +171,19 @@ int makeplot(
         hEff[icent]->Draw("HIST SAME");
     }
 
+    auto * pt2Line = new TLine(min_pt2, 0.0, min_pt2, 1.15);
+    pt2Line->SetLineColor(kBlack);
+    pt2Line->SetLineStyle(2);
+    pt2Line->SetLineWidth(2);
+    pt2Line->Draw("SAME");
+
     auto* unityLine = new TLine(5.0, 1.0, 30.0, 1.0);
     unityLine->SetLineColor(kBlack);
     unityLine->SetLineStyle(2);
     unityLine->SetLineWidth(2);
     unityLine->Draw("SAME");
 
-    auto legend2 = new TLegend(0.75, 0.42, 0.92, 0.57);
+    auto legend2 = new TLegend(0.4, 0.32, 0.75, 0.47);
     legend2 -> SetTextSize(0.037);
     legend2 -> SetBorderSize(0);
     legend2 -> SetFillStyle(0);
@@ -180,6 +196,7 @@ int makeplot(
             "l"
         );
     }
+    legend2 -> AddEntry(pt2Line, Form("p_{T,2}^{min} = %.1f GeV", min_pt2), "l");
     legend2 -> Draw("SAME");
 
     yy = 0.67;
