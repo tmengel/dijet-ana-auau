@@ -138,6 +138,7 @@ int AnaTreev1::Init( PHCompositeNode * /*topNode*/ )
         if ( !m_phHep_node.empty() ) 
         {
             m_tree -> Branch( "truth_jet_flavor", &m_truth_jet_flavor );
+            m_tree -> Branch( "truth_jet_parton_pT", &m_truth_jet_parton_pT );
             m_tree -> Branch( "truth_zvtx", &m_truth_zvtx, "truth_zvtx/F" );
             m_tree -> Branch( "truth_jet_R", &m_truth_jet_R, "truth_jet_R/F" );
             m_tree -> Branch( "truth_jet_maxpT_r04", &m_truth_jet_maxpT_r04, "truth_jet_maxpT_r04/F" );
@@ -476,6 +477,7 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
         m_truth_jet_eta.clear();
         m_truth_jet_pT.clear();
         m_truth_jet_flavor.clear();
+        m_truth_jet_parton_pT.clear();
         m_truth_jet_R = -1;
         m_truth_jet_maxpT_r04 = -1;
 
@@ -533,6 +535,46 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
             if ( genevt ){ hepmc_event = genevt->getEvent(); }
         }
 
+        // walk the shower history (ISR+FSR) forward from a hard-process
+        // parton to its last same-flavor copy, i.e. the parton as it
+        // enters hadronization. the raw hard-process (status 21/22/23)
+        // momentum is defined at the 2->2 vertex, before the backward
+        // ISR evolution on the incoming legs finishes reshuffling
+        // momentum/frame across the whole event -- matching jets
+        // (which live in the final, fully-showered lab frame) against
+        // that pre-ISR momentum directly can be systematically
+        // mismatched. at each branching, follow the highest-pT
+        // daughter that keeps the same |pdg_id|; stop once there's no
+        // such daughter left (that particle is the final parton copy).
+        auto find_final_parton = []( HepMC::GenParticle * p ) -> HepMC::GenParticle *
+        {
+            const int pid = abs( p->pdg_id() );
+            while ( p && p->end_vertex() )
+            {
+                HepMC::GenParticle * next = nullptr;
+                float next_pt = -1.0;
+                for (
+                    HepMC::GenVertex::particles_out_const_iterator d = p->end_vertex()->particles_out_const_begin();
+                    d != p->end_vertex()->particles_out_const_end();
+                    ++d
+                )
+                {
+                    if ( !(*d) || abs( (*d)->pdg_id() ) != pid ) continue;
+                    const HepMC::FourVector mom = (*d)->momentum();
+                    const float dpt = sqrt( mom.px() * mom.px() + mom.py() * mom.py() );
+                    if ( dpt > next_pt )
+                    {
+                        next_pt = dpt;
+                        next = *d;
+                    }
+                }
+                if ( !next ) break; // no same-flavor daughter left -- p is the final copy
+                p = next;
+            }
+            return p;
+        };
+
+
         for ( const auto & jet : * truth_jets )
         {
             // m_truth_jet_E.push_back(jet->get_e());
@@ -545,61 +587,69 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
             float phi = jet->get_phi();
             float pt = jet->get_pt();
 
-            int flavor = 0;
+            int flavor = -1;
             float max_pt = 0;
             for (
                 HepMC::GenEvent::particle_const_iterator p = hepmc_event->particles_begin();
-		        p != hepmc_event->particles_end(); 
+		        p != hepmc_event->particles_end();
                 ++p
             )
 		    {
                 HepMC::GenParticle * particle = *p;
 		        if (!particle) continue;
-      
+
                 int pid = abs(particle->pdg_id());
                 int status = particle->status();
+
                 // Select outgoing partons from hard scattering (status 23) or
                 // partons before hadronization (status 21, 22)
                 if (status != 23 && status != 21 && status != 22 ) continue;
-                
+
                 // Only consider quarks (1-6) and gluons (21)
-                if (!(pid >= 1 && pid <= 6) && pid != 21) continue;
-                
-                HepMC::FourVector momentum = particle->momentum();
+                bool is_quark = (pid >= 1 && pid <= 6);
+                bool is_gluon = (pid == 21);
+                if (!is_quark && !is_gluon) continue;
+
+                // if (!(pid >= 1 && pid <= 6) && pid != 21) continue;
+
+                HepMC::GenParticle * final_parton = find_final_parton( particle );
+                HepMC::FourVector momentum = final_parton->momentum();
                 float part_pt = sqrt(momentum.px() * momentum.px() + momentum.py() * momentum.py());
                 float part_eta = momentum.eta();
                 float part_phi = momentum.phi();
                 
                 // Require minimum pT for parton matching
-                if (part_pt < 1.0) continue;
+                if ( part_pt < 1.0 ) continue;
 
                 // Calculate angular distance between parton and jet
-                if (part_phi > TMath::Pi())
+                if ( part_phi > TMath::Pi() )
                 {
                     part_phi -= 2*TMath::Pi();
                 }
 
                 float deta = fabs(eta - part_eta);
                 float dphi = fabs(phi - part_phi);
-
                 if (dphi > TMath::Pi())
                 {
                     dphi -= 2*TMath::Pi();
                 }
+
                 float dr = sqrt(deta*deta + dphi*dphi);
 
-                // Match parton to jet if within jet radius and has highest pT
+                // Match closest parton with highest pT
                 if (dr < 0.4 && part_pt > max_pt)
                 {
                     max_pt = part_pt;
                     flavor = pid;
-                }	   	  
+                }
 		    }
+
             m_truth_jet_E.push_back(e);
             m_truth_jet_eta.push_back(eta);
             m_truth_jet_phi.push_back(phi);
             m_truth_jet_pT.push_back(pt);
             m_truth_jet_flavor.push_back(flavor);
+            m_truth_jet_parton_pT.push_back(max_pt);
         }
 
     }

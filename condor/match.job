@@ -1,0 +1,14 @@
+initialDir          = /sphenix/user/tmengel/dijet-ana-auau/condor
+Universe            = vanilla
+Executable          = $(initialDir)/match.sh
+PeriodicHold        = (NumJobStarts>=1 && JobStatus == 1)
+request_memory      = 3GB
+batch_name          = jet10_hijing_scaled
+versionTag          = 08_14_2026_v001
+outputDir           = /sphenix/user/tmengel/dijet-ana-auau/macros/truth-matching/rootfiles/$(versionTag)/$(batch_name)
+condorDir           = $(initialDir)/logs
+Output              = $(condorDir)/$(batch_name)-$(PROCESS).out
+Error               = $(condorDir)/$(batch_name)-$(PROCESS).err
+Log                 = /tmp/condorjob-tmengel.log
+Arguments           = "$(list) $(versionTag) $(outputDir)"
+Queue list from /sphenix/user/tmengel/dijet-ana-auau/catalog/$(batch_name)_master.list

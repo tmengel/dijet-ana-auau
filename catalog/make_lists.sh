@@ -1,15 +1,7 @@
 #/bin/bash
 
 python3 catalog.py 
-# python3 make_list.py -d overlay -s hijing_sub1
-# for js in 30 ; do
-#     for sub in 0 1 ; do
-#         for jetR in 3 4 ; do
-#             jetSample="jet${js}_r0${jetR}_sub${sub}"
-#             rm -f ${jetSample}/*.list
-#             echo "Making list for ${jetSample}"
-#             python3 make_list.py -d overlay -s ${jetSample}
-#             find "$(pwd)/${jetSample}" -name "*.list" | sort -u > "${jetSample}.list"
-#         done
-#     done
-# done
+for j in 10 20 30 ; do 
+    python3 make_list.py -d trees -s "jet${j}_hijing_scaled" -n 100
+    find "$(pwd)/jet${j}_hijing_scaled" -type f -name "*.list" | sort -u > jet${j}_hijing_scaled_master.list
+done

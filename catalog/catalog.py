@@ -41,7 +41,8 @@ for version_dir in sorted(p for p in ROOT.iterdir() if p.is_dir()):
     date = match.group("date")
     version = int(match.group("version"))
 
-    # trees/: flat directory of *.root files
+    # trees/: flat directory of *.root files, plus optional
+    # trees/<sample>/{scaled,unsclaed}/*.root (pass3 output, mirrors dsts/)
     trees_dir = version_dir / "trees"
     if trees_dir.is_dir():
         catalog.setdefault("trees", {}).setdefault("trees", []).append({
@@ -50,6 +51,16 @@ for version_dir in sorted(p for p in ROOT.iterdir() if p.is_dir()):
             "path": str(trees_dir),
             "nfiles": count_root_files(trees_dir),
         })
+
+        for sample_dir in sorted(p for p in trees_dir.iterdir() if p.is_dir()):
+            for kind_dir in sorted(p for p in sample_dir.iterdir() if p.is_dir()):
+                sample_name = f"{sample_dir.name}_{kind_dir.name}"
+                catalog.setdefault("trees", {}).setdefault(sample_name, []).append({
+                    "version": version,
+                    "date": date,
+                    "path": str(kind_dir),
+                    "nfiles": count_root_files(kind_dir),
+                })
 
     # dsts/<sample>/{scaled,unsclaed}/*.root
     dsts_dir = version_dir / "dsts"

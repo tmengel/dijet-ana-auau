@@ -140,6 +140,7 @@ class AnaTreev1 : public SubsysReco
   std::vector < float > m_truth_jet_eta {};
   std::vector < float > m_truth_jet_pT {};
   std::vector < int >   m_truth_jet_flavor {};
+  std::vector < float >   m_truth_jet_parton_pT {};
 
   static const int k_ieta = 24;
   static const int k_iphi = 64;
