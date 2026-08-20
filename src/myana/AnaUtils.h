@@ -5,6 +5,8 @@
 #include <string>
 #include <array>
 
+class TTree;
+
 namespace AnaUtils
 {
     float get_dpsi2( const float psi2, const float phi );
@@ -62,6 +64,15 @@ namespace AnaUtils
     float get_calo_r( const CaloType calo );
     float get_corrected_calo_eta( const CaloType calo, const int ieta, const float zvrtx );
 
+    // sum of transverse energy (E/cosh(eta), using the z-vertex corrected
+    // tower eta) over towers flagged good in tower_isgood[ieta][iphi]
+    float calc_sumeT(
+        const CaloType calo,
+        const float zvrtx,
+        const float tower_E[24][64],
+        const int tower_isgood[24][64]
+    );
+
     void myText( double x, double y, int color, const char * text, const float size = 0.03 );
 
     double flow_func( double * x, double * par );
@@ -83,7 +94,96 @@ namespace AnaUtils
     
 
    std::vector< std::string > getFilelist( const std::string & inlist , const std::string & ext = ".root" );
-   
+
+   //--------------------------------------------------------------------
+   // truth-reco jet matching
+   //--------------------------------------------------------------------
+
+   // indices (into the original, unfiltered jet vectors) of jets passing
+   // basic kinematic cuts, sorted by descending pT. the eta cut uses
+   // accept_jet_eta(), i.e. the z-vertex- and jet-radius-dependent
+   // calorimeter acceptance window, not a flat |eta| cut.
+   std::vector<int> select_jets(
+       const std::vector<float> & pt,
+       const std::vector<float> & e,
+       const std::vector<float> & eta,
+       const float min_pt,
+       const float zvrtx,
+       const float jet_R,
+       const bool require_e_positive = false
+   );
+
+   // one row per truth/reco jet relationship: a matched pair has both
+   // indices set, an unmatched truth jet has reco_index == -1, and an
+   // unmatched reco jet has truth_index == -1. Indices refer back into
+   // the original (unfiltered) truth/reco jet vectors passed in.
+   struct JetMatch
+   {
+       int truth_index { -1 };
+       int reco_index  { -1 };
+       float dr        { -1.0f };
+   };
+
+   // greedy nearest-neighbor matching (globally ascending dR) between the
+   // truth jets listed in truth_indices and the reco jets listed in
+   // reco_indices. Returns matched pairs first, then unmatched truth jets,
+   // then unmatched reco jets -- ready to be written out in that order.
+   std::vector<JetMatch> match_truth_reco_jets(
+       const std::vector<int> & truth_indices,
+       const std::vector<float> & truth_eta,
+       const std::vector<float> & truth_phi,
+       const std::vector<int> & reco_indices,
+       const std::vector<float> & reco_eta,
+       const std::vector<float> & reco_phi,
+       const float max_dr
+   );
+
+   // flat, one-row-per-jet output format for a matched truth/reco jet tree.
+   // match_status: 0 = matched pair, 1 = unmatched truth, 2 = unmatched reco.
+   // reco_type: 0 = rho-subtracted jet, 1 = sub1(seeded)-subtracted jet.
+   // Unfilled fields (e.g. truth_* for an unmatched reco row) are set to -999.
+   struct MatchedJetRow
+   {
+       // event level
+       int   event_id    { -999 };
+       int   cent        { -999 };
+       float zvrtx       { -999.0f };
+       float mbdQ        { -999.0f };
+       float sumeT       { -999.0f };
+       int   is_minbias  { -999 };
+       float psi2        { -999.0f };
+       float truth_jet_maxpt_r04 { -999.0f };
+
+       // matching info
+       int   reco_type    { -999 };
+       int   match_status { -999 };
+       float dr           { -999.0f };
+
+       // truth jet
+       float truth_pt     { -999.0f };
+       float truth_e      { -999.0f };
+       float truth_eta    { -999.0f };
+       float truth_phi    { -999.0f };
+       int   truth_flavor { -999 };
+
+       // matched reco jet
+       float reco_pt        { -999.0f };
+       float reco_e         { -999.0f };
+       float reco_eta       { -999.0f };
+       float reco_phi       { -999.0f };
+       float reco_unsub_e   { -999.0f };
+       float reco_unsub_pt  { -999.0f };
+   };
+
+   // creates one branch per MatchedJetRow member on tree, bound to row.
+   // call once, right after constructing the (empty) output TTree.
+   void book_matched_jet_tree( TTree * tree, MatchedJetRow & row );
+
+   // binds tree's branches to row for reading, e.g. when analyzing the
+   // output of a macro built on book_matched_jet_tree(). call once, right
+   // after opening the tree, then GetEntry() to fill row.
+   void read_matched_jet_tree( TTree * tree, MatchedJetRow & row );
+
 } // namespace MyAna
 
 #endif // _ANAUTILS_H_

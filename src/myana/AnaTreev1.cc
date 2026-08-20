@@ -500,8 +500,8 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
                         maxpT = jet->get_pt();
                     }
                 }
+                m_truth_jet_maxpT_r04 = maxpT;
             }
-
         }
         else
         {
@@ -553,14 +553,14 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
                 ++p
             )
 		    {
-                HepMC::GenParticle *particle = *p;
+                HepMC::GenParticle * particle = *p;
 		        if (!particle) continue;
       
                 int pid = abs(particle->pdg_id());
                 int status = particle->status();
                 // Select outgoing partons from hard scattering (status 23) or
                 // partons before hadronization (status 21, 22)
-                if (status != 23 && status != 21 && status != 22) continue;
+                if (status != 23 && status != 21 && status != 22 ) continue;
                 
                 // Only consider quarks (1-6) and gluons (21)
                 if (!(pid >= 1 && pid <= 6) && pid != 21) continue;
@@ -571,24 +571,25 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
                 float part_phi = momentum.phi();
                 
                 // Require minimum pT for parton matching
-                if (part_pt < 3.0) continue;
+                if (part_pt < 1.0) continue;
 
                 // Calculate angular distance between parton and jet
                 if (part_phi > TMath::Pi())
                 {
-                    part_phi = 2*TMath::Pi() - part_phi;
+                    part_phi -= 2*TMath::Pi();
                 }
+
                 float deta = fabs(eta - part_eta);
                 float dphi = fabs(phi - part_phi);
 
                 if (dphi > TMath::Pi())
                 {
-                    dphi = 2*TMath::Pi() - dphi;
+                    dphi -= 2*TMath::Pi();
                 }
                 float dr = sqrt(deta*deta + dphi*dphi);
 
                 // Match parton to jet if within jet radius and has highest pT
-                if (dr < m_truth_jet_R && part_pt > max_pt)
+                if (dr < 0.4 && part_pt > max_pt)
                 {
                     max_pt = part_pt;
                     flavor = pid;

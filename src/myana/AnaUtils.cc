@@ -3,9 +3,12 @@
 #include <fstream>
 #include <iostream>
 #include <cmath>
+#include <algorithm>
+#include <numeric>
 
 #include <TMath.h>
 #include <TLatex.h>
+#include <TTree.h>
 
 std::vector< std::string > AnaUtils::getFilelist( const std::string & inlist , const std::string & ext )
 {
@@ -153,6 +156,27 @@ float AnaUtils::get_corrected_calo_eta( const CaloType calo, const int ieta, con
     return correct_calo_eta( eta0, zvrtx, R );
 }
 
+float AnaUtils::calc_sumeT(
+    const CaloType calo,
+    const float zvrtx,
+    const float tower_E[24][64],
+    const int tower_isgood[24][64]
+)
+{
+    float sum = 0.0;
+    for ( int ieta = 0; ieta < 24; ++ieta )
+    {
+        const float eta_corr = get_corrected_calo_eta( calo, ieta, zvrtx );
+        const float inv_cosh_eta = 1.0f / std::cosh( eta_corr );
+        for ( int iphi = 0; iphi < 64; ++iphi )
+        {
+            if ( !tower_isgood[ieta][iphi] ) continue;
+            sum += tower_E[ieta][iphi] * inv_cosh_eta;
+        }
+    }
+    return sum;
+}
+
 double AnaUtils::flow_func( double * x, double * par )
 {
    double a = par[0];
@@ -229,5 +253,135 @@ void AnaUtils::myText( double x, double y, int color, const char * text, const f
     t -> SetTextSize(size);
     t -> SetTextColor(color);
     t -> DrawLatex(x, y, text);
+}
+
+std::vector<int> AnaUtils::select_jets(
+    const std::vector<float> & pt,
+    const std::vector<float> & e,
+    const std::vector<float> & eta,
+    const float min_pt,
+    const float zvrtx,
+    const float jet_R,
+    const bool require_e_positive
+)
+{
+    std::vector<int> selected;
+    for ( size_t i = 0; i < pt.size(); ++i )
+    {
+        if ( pt[i] < min_pt ) continue;
+        if ( !accept_jet_eta( eta[i], zvrtx, jet_R ) ) continue;
+        if ( require_e_positive && e[i] < 0.0 ) continue;
+        selected.push_back( static_cast<int>(i) );
+    }
+    std::sort( selected.begin(), selected.end(), [&]( int a, int b ) { return pt[a] > pt[b]; } );
+    return selected;
+}
+
+std::vector<AnaUtils::JetMatch> AnaUtils::match_truth_reco_jets(
+    const std::vector<int> & truth_indices,
+    const std::vector<float> & truth_eta,
+    const std::vector<float> & truth_phi,
+    const std::vector<int> & reco_indices,
+    const std::vector<float> & reco_eta,
+    const std::vector<float> & reco_phi,
+    const float max_dr
+)
+{
+    struct Candidate { int truth_index; int reco_index; float dr; };
+    std::vector<Candidate> candidates;
+    candidates.reserve( truth_indices.size() * reco_indices.size() );
+    for ( const int ti : truth_indices )
+    {
+        for ( const int ri : reco_indices )
+        {
+            const float dr = calc_dr( truth_eta[ti], truth_phi[ti], reco_eta[ri], reco_phi[ri] );
+            if ( dr < max_dr )
+            {
+                candidates.push_back( { ti, ri, dr } );
+            }
+        }
+    }
+    std::sort( candidates.begin(), candidates.end(), [] ( const Candidate & a, const Candidate & b ) { return a.dr < b.dr; } );
+
+    std::vector<bool> truth_used( truth_indices.empty() ? 0 : *std::max_element( truth_indices.begin(), truth_indices.end() ) + 1, false );
+    std::vector<bool> reco_used( reco_indices.empty() ? 0 : *std::max_element( reco_indices.begin(), reco_indices.end() ) + 1, false );
+
+    std::vector<JetMatch> matched;
+    for ( const auto & c : candidates )
+    {
+        if ( truth_used[c.truth_index] || reco_used[c.reco_index] ) continue;
+        truth_used[c.truth_index] = true;
+        reco_used[c.reco_index] = true;
+        matched.push_back( { c.truth_index, c.reco_index, c.dr } );
+    }
+
+    std::vector<JetMatch> result = matched;
+    for ( const int ti : truth_indices )
+    {
+        if ( !truth_used[ti] ) result.push_back( { ti, -1, -1.0f } );
+    }
+    for ( const int ri : reco_indices )
+    {
+        if ( !reco_used[ri] ) result.push_back( { -1, ri, -1.0f } );
+    }
+    return result;
+}
+
+void AnaUtils::book_matched_jet_tree( TTree * tree, MatchedJetRow & row )
+{
+    tree -> Branch( "event_id", &row.event_id, "event_id/I" );
+    tree -> Branch( "cent", &row.cent, "cent/I" );
+    tree -> Branch( "zvrtx", &row.zvrtx, "zvrtx/F" );
+    tree -> Branch( "mbdQ", &row.mbdQ, "mbdQ/F" );
+    tree -> Branch( "sumeT", &row.sumeT, "sumeT/F" );
+    tree -> Branch( "is_minbias", &row.is_minbias, "is_minbias/I" );
+    tree -> Branch( "psi2", &row.psi2, "psi2/F" );
+    tree -> Branch( "truth_jet_maxpt_r04", &row.truth_jet_maxpt_r04, "truth_jet_maxpt_r04/F" );
+
+    tree -> Branch( "reco_type", &row.reco_type, "reco_type/I" );
+    tree -> Branch( "match_status", &row.match_status, "match_status/I" );
+    tree -> Branch( "dr", &row.dr, "dr/F" );
+
+    tree -> Branch( "truth_pt", &row.truth_pt, "truth_pt/F" );
+    tree -> Branch( "truth_e", &row.truth_e, "truth_e/F" );
+    tree -> Branch( "truth_eta", &row.truth_eta, "truth_eta/F" );
+    tree -> Branch( "truth_phi", &row.truth_phi, "truth_phi/F" );
+    tree -> Branch( "truth_flavor", &row.truth_flavor, "truth_flavor/I" );
+
+    tree -> Branch( "reco_pt", &row.reco_pt, "reco_pt/F" );
+    tree -> Branch( "reco_e", &row.reco_e, "reco_e/F" );
+    tree -> Branch( "reco_eta", &row.reco_eta, "reco_eta/F" );
+    tree -> Branch( "reco_phi", &row.reco_phi, "reco_phi/F" );
+    tree -> Branch( "reco_unsub_e", &row.reco_unsub_e, "reco_unsub_e/F" );
+    tree -> Branch( "reco_unsub_pt", &row.reco_unsub_pt, "reco_unsub_pt/F" );
+}
+
+void AnaUtils::read_matched_jet_tree( TTree * tree, MatchedJetRow & row )
+{
+    tree -> SetBranchAddress( "event_id", &row.event_id );
+    tree -> SetBranchAddress( "cent", &row.cent );
+    tree -> SetBranchAddress( "zvrtx", &row.zvrtx );
+    tree -> SetBranchAddress( "mbdQ", &row.mbdQ );
+    tree -> SetBranchAddress( "sumeT", &row.sumeT );
+    tree -> SetBranchAddress( "is_minbias", &row.is_minbias );
+    tree -> SetBranchAddress( "psi2", &row.psi2 );
+    tree -> SetBranchAddress( "truth_jet_maxpt_r04", &row.truth_jet_maxpt_r04 );
+
+    tree -> SetBranchAddress( "reco_type", &row.reco_type );
+    tree -> SetBranchAddress( "match_status", &row.match_status );
+    tree -> SetBranchAddress( "dr", &row.dr );
+
+    tree -> SetBranchAddress( "truth_pt", &row.truth_pt );
+    tree -> SetBranchAddress( "truth_e", &row.truth_e );
+    tree -> SetBranchAddress( "truth_eta", &row.truth_eta );
+    tree -> SetBranchAddress( "truth_phi", &row.truth_phi );
+    tree -> SetBranchAddress( "truth_flavor", &row.truth_flavor );
+
+    tree -> SetBranchAddress( "reco_pt", &row.reco_pt );
+    tree -> SetBranchAddress( "reco_e", &row.reco_e );
+    tree -> SetBranchAddress( "reco_eta", &row.reco_eta );
+    tree -> SetBranchAddress( "reco_phi", &row.reco_phi );
+    tree -> SetBranchAddress( "reco_unsub_e", &row.reco_unsub_e );
+    tree -> SetBranchAddress( "reco_unsub_pt", &row.reco_unsub_pt );
 }
 
