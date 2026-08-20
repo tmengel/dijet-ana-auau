@@ -76,7 +76,7 @@ void Fun4All_UEScaling_Pass3 (
     const int nEvents               = 10,
     const int jetId                 = 10,
     const std::string & infile      = "DST_CALO_CLUSTER_pythia8_Jet10_scaled11perc_sHijing_0_20fm-00000031-00000.root",
-    const std::string & outfile     = "DST_SCALED_jet10_hijing31_pass3.root"
+    const std::string & outfile     = "TREE_SCALED_jet10_hijing31_pass3.root"
 )
 {
     
