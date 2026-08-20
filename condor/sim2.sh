@@ -1,0 +1,102 @@
+#!/bin/bash
+
+INSTALLDIR="/sphenix/user/tmengel/dijet-ana-auau/install"
+source /opt/sphenix/core/bin/sphenix_setup.sh -n new
+source $OPT_SPHENIX/bin/setup_local.sh $INSTALLDIR
+
+echo "Running nominal mb hijing with waveform fit"
+
+macrodir="/sphenix/user/tmengel/dijet-ana-auau/macros/hijing"
+cd $macrodir || exit 1
+
+SEGMENT="$1"
+# versionTag="08_14_2026_v001"
+versionTag="$2"
+
+NEVENTS=-1
+RUN_NUM=31
+
+
+OUTPUTDIR="/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/$versionTag"
+mkdir -p $OUTPUTDIR
+
+treeoutdir="$OUTPUTDIR/trees"
+mkdir -p $treeoutdir  
+
+dstoutdir="$OUTPUTDIR/dsts"
+mkdir -p $dstoutdir
+
+# embfile="${treeoutdir}/CALO_TREE_noNoise_hijing${RUN_NUM}_pass1-$(printf "%05d" "$SEGMENT").root"
+# root -l -q -b "Fun4All_UEScaling_Pass1.C(${NEVENTS}, ${RUN_NUM}, ${SEGMENT}, \"${embfile}\", true)"
+# EXITCODE=$?
+# if [ $EXITCODE -ne 0 ]; then
+#     echo "Error: ${EXITCODE} running Fun4All_UEScaling_Pass1.C"
+#     exit $EXITCODE
+# fi
+
+for jetid in -1 10 20 30 ; do 
+    if [ $jetid -eq -1 ]; then
+        echo "Running nominal mb hijing with waveform fit for jetid $jetid"
+        this_dstindir="${dstoutdir}/mb_hijing/scaled"
+        infile="${this_dstindir}/DST_SCALED_mb_hijing${RUN_NUM}_pass2-$(printf "%05d" "$SEGMENT").root"
+        if [ ! -f "$infile" ]; then
+            echo "Error: Input file ${infile} does not exist. Please run the previous step to generate it."
+        else
+            this_treeoutdir="${treeoutdir}/mb_hijing/scaled"
+            mkdir -p $this_treeoutdir
+
+            treefile="${this_treeoutdir}/CALO_TREE_SCALED_mb_hijing${RUN_NUM}_pass3-$(printf "%05d" "$SEGMENT").root"
+            root -l -q -b "Fun4All_UEScaling_Pass3.C(${NEVENTS}, ${jetid}, \"${infile}\", \"${treefile}\")"        
+            EXITCODE=$?
+            if [ $EXITCODE -ne 0 ]; then
+                echo "Error: ${EXITCODE} running Fun4All_UEScaling_Pass3.C for jetid $jetid"
+            fi
+        fi
+        this_dstindir="${dstoutdir}/mb_hijing/unsclaed"
+        infile="${this_dstindir}/DST_UNSCALED_mb_hijing${RUN_NUM}_pass2-$(printf "%05d" "$SEGMENT").root"
+        if [ ! -f "$infile" ]; then
+            echo "Error: Input file ${infile} does not exist. Please run the previous step to generate it."
+        else
+            this_treeoutdir="${treeoutdir}/mb_hijing/unsclaed"
+            mkdir -p $this_treeoutdir
+            treefile="${this_treeoutdir}/CALO_TREE_UNSCALED_mb_hijing${RUN_NUM}_pass3-$(printf "%05d" "$SEGMENT").root"
+            root -l -q -b "Fun4All_UEScaling_Pass3.C(${NEVENTS}, ${jetid}, \"${infile}\", \"${treefile}\")"        
+            EXITCODE=$?
+            if [ $EXITCODE -ne 0 ]; then
+                echo "Error: ${EXITCODE} running Fun4All_UEScaling_Pass3.C for jetid $jetid"
+            fi
+        fi
+    else
+        echo "Running nominal mb hijing with waveform fit for jetid $jetid"
+        this_dstindir="${dstoutdir}/jet${jetid}_hijing/scaled"
+        infile="${this_dstindir}/DST_SCALED_jet${jetid}_hijing${RUN_NUM}_pass2-$(printf "%05d" "$SEGMENT").root"
+        if [ ! -f "$infile" ]; then
+            echo "Error: Input file ${infile} does not exist. Please run the previous step to generate it."
+        else
+            this_treeoutdir="${treeoutdir}/jet${jetid}_hijing/scaled"
+            mkdir -p $this_treeoutdir
+            treefile="${this_treeoutdir}/CALO_TREE_SCALED_jet${jetid}_hijing${RUN_NUM}_pass3-$(printf "%05d" "$SEGMENT").root"
+            root -l -q -b "Fun4All_UEScaling_Pass3.C(${NEVENTS}, ${jetid}, \"${infile}\", \"${treefile}\")"        
+            EXITCODE=$?
+            if [ $EXITCODE -ne 0 ]; then
+                echo "Error: ${EXITCODE} running Fun4All_UEScaling_Pass3.C for jetid $jetid"
+            fi
+        fi
+        this_dstindir="${dstoutdir}/jet${jetid}_hijing/unsclaed"
+        infile="${this_dstindir}/DST_UNSCALED_jet${jetid}_hijing${RUN_NUM}_pass2-$(printf "%05d" "$SEGMENT").root"
+        if [ ! -f "$infile" ]; then
+            echo "Error: Input file ${infile} does not exist. Please run the previous step to generate it."
+        else
+            this_treeoutdir="${treeoutdir}/jet${jetid}_hijing/unsclaed"
+            mkdir -p $this_treeoutdir
+            treefile="${this_treeoutdir}/CALO_TREE_UNSCALED_jet${jetid}_hijing${RUN_NUM}_pass3-$(printf "%05d" "$SEGMENT").root"
+            root -l -q -b "Fun4All_UEScaling_Pass3.C(${NEVENTS}, ${jetid}, \"${infile}\", \"${treefile}\")"        
+            EXITCODE=$?
+            if [ $EXITCODE -ne 0 ]; then
+                echo "Error: ${EXITCODE} running Fun4All_UEScaling_Pass3.C for jetid $jetid"
+            fi
+        fi
+    fi
+done
+
+   

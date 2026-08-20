@@ -7,8 +7,8 @@ Priority            = 20
 batch_name          = sim2
 versionTag          = 08_14_2026_v001
 condorDir           = $(initialDir)/logs/08_14_2026_v001
-Output              = $(condorDir)/pass1-$(PROCESS).out
-Error               = $(condorDir)/pass1-$(PROCESS).err
+Output              = $(condorDir)/pass1-$(id).out
+Error               = $(condorDir)/pass1-$(id).err
 Log                 = /tmp/condorjob-tmengel.log
-Arguments           = "$(PROCESS) $(versionTag)"
-Queue 15000
+Arguments           = "$(id) $(versionTag)"
+Queue id from $(initialDir)/held.list
