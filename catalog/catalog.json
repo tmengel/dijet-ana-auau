@@ -6,6 +6,18 @@
         "date": "08_14_2026",
         "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_14_2026_v001/trees",
         "nfiles": 15000
+      },
+      {
+        "version": 1,
+        "date": "08_21_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_21_2026_v001/trees",
+        "nfiles": 0
+      },
+      {
+        "version": 2,
+        "date": "08_24_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_24_2026_v002/trees",
+        "nfiles": 0
       }
     ],
     "jet10_hijing_scaled": [
@@ -13,6 +25,18 @@
         "version": 1,
         "date": "08_14_2026",
         "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_14_2026_v001/trees/jet10_hijing/scaled",
+        "nfiles": 14988
+      },
+      {
+        "version": 1,
+        "date": "08_21_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_21_2026_v001/trees/jet10_hijing/scaled",
+        "nfiles": 14988
+      },
+      {
+        "version": 2,
+        "date": "08_24_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_24_2026_v002/trees/jet10_hijing/scaled",
         "nfiles": 14988
       }
     ],
@@ -22,6 +46,18 @@
         "date": "08_14_2026",
         "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_14_2026_v001/trees/jet10_hijing/unsclaed",
         "nfiles": 15000
+      },
+      {
+        "version": 1,
+        "date": "08_21_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_21_2026_v001/trees/jet10_hijing/unsclaed",
+        "nfiles": 0
+      },
+      {
+        "version": 2,
+        "date": "08_24_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_24_2026_v002/trees/jet10_hijing/unsclaed",
+        "nfiles": 15000
       }
     ],
     "jet20_hijing_scaled": [
@@ -30,6 +66,18 @@
         "date": "08_14_2026",
         "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_14_2026_v001/trees/jet20_hijing/scaled",
         "nfiles": 14988
+      },
+      {
+        "version": 1,
+        "date": "08_21_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_21_2026_v001/trees/jet20_hijing/scaled",
+        "nfiles": 14988
+      },
+      {
+        "version": 2,
+        "date": "08_24_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_24_2026_v002/trees/jet20_hijing/scaled",
+        "nfiles": 14988
       }
     ],
     "jet20_hijing_unsclaed": [
@@ -37,7 +85,19 @@
         "version": 1,
         "date": "08_14_2026",
         "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_14_2026_v001/trees/jet20_hijing/unsclaed",
-        "nfiles": 14973
+        "nfiles": 15000
+      },
+      {
+        "version": 1,
+        "date": "08_21_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_21_2026_v001/trees/jet20_hijing/unsclaed",
+        "nfiles": 0
+      },
+      {
+        "version": 2,
+        "date": "08_24_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_24_2026_v002/trees/jet20_hijing/unsclaed",
+        "nfiles": 15000
       }
     ],
     "jet30_hijing_scaled": [
@@ -45,7 +105,19 @@
         "version": 1,
         "date": "08_14_2026",
         "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_14_2026_v001/trees/jet30_hijing/scaled",
-        "nfiles": 14941
+        "nfiles": 14988
+      },
+      {
+        "version": 1,
+        "date": "08_21_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_21_2026_v001/trees/jet30_hijing/scaled",
+        "nfiles": 14988
+      },
+      {
+        "version": 2,
+        "date": "08_24_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_24_2026_v002/trees/jet30_hijing/scaled",
+        "nfiles": 14988
       }
     ],
     "jet30_hijing_unsclaed": [
@@ -53,7 +125,19 @@
         "version": 1,
         "date": "08_14_2026",
         "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_14_2026_v001/trees/jet30_hijing/unsclaed",
-        "nfiles": 14953
+        "nfiles": 15000
+      },
+      {
+        "version": 1,
+        "date": "08_21_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_21_2026_v001/trees/jet30_hijing/unsclaed",
+        "nfiles": 0
+      },
+      {
+        "version": 2,
+        "date": "08_24_2026",
+        "path": "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_24_2026_v002/trees/jet30_hijing/unsclaed",
+        "nfiles": 15000
       }
     ],
     "mb_hijing_scaled": [

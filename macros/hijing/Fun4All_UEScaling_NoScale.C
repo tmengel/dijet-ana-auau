@@ -72,10 +72,10 @@ TowerJetInput * GetTowerInput(
     const std::string & prefix = "TOWERINFO_CALIB" 
 );
 
-void Fun4All_UEScaling_Pass3 (
+void Fun4All_UEScaling_NoScale (
     const int nEvents               = 10,
-    const int jetId                 = 10,
-    const std::string & infile      = "DST_CALO_CLUSTER_pythia8_Jet10_scaled11perc_sHijing_0_20fm-00000031-00000.root",
+    // const int jetId                 = 10,
+    // const std::string & infile      = "DST_CALO_CLUSTER_pythia8_Jet10_scaled11perc_sHijing_0_20fm-00000031-00000.root",
     const std::string & outfile     = "TREE_SCALED_jet10_hijing31_pass3.root"
 )
 {
@@ -86,6 +86,8 @@ void Fun4All_UEScaling_Pass3 (
 
     const std::string & cdbtag = "MDC2";
     const int run_number = 31;
+    const int segment = 0;
+    const int jet_flag = 20;
     Enable::CDB = true;
         
     auto * se = Fun4AllServer::instance();
@@ -101,12 +103,21 @@ void Fun4All_UEScaling_Pass3 (
     auto * flag = new FlagHandler();
     se -> registerSubsystem( flag );
 
-    auto * input = new Fun4AllDstInputManager( "DSTINPUT" );
-    std::cout << "\tAdding input file: " << infile << std::endl;
-    input -> AddFile( infile );
-    input -> Verbosity( Enable::VERBOSITY );
-    se -> registerInputManager( input );
+    // auto * input = new Fun4AllDstInputManager( "DSTINPUT" );
+    // std::cout << "\tAdding input file: " << infile << std::endl;
+    // input -> AddFile( infile );
+    // input -> Verbosity( Enable::VERBOSITY );
+    // se -> registerInputManager( input );
 
+    for ( const auto & DSTTPYE : { "DST_CALO_CLUSTER" , "DST_GLOBAL",  "DST_MBD_EPD",  "DST_TRUTH_JET"})
+    {
+        std::string infile = Form( "%s_pythia8_Jet%d_sHijing_0_20fm-%010d-%06d.root", DSTTPYE, jet_flag, run_number, segment );
+        std::cout << "\tAdding input file: " << infile << std::endl;
+        auto input = new Fun4AllDstInputManager( Form( "DSTINPUT_%s", DSTTPYE ) );
+        input -> AddFile( infile );
+        input -> Verbosity( Enable::VERBOSITY );
+        se -> registerInputManager( input );
+    }
     auto * rcemc = new RetowerCEMC( "RetowerCEMC" );
     rcemc -> set_towerinfo( true );
     rcemc -> set_frac_cut( 1.0 );
@@ -190,63 +201,63 @@ void Fun4All_UEScaling_Pass3 (
     trc -> add_tower_input( GetTowerInput( Jet::HCALOUT_TOWERINFO ) );
     se -> registerSubsystem( trc );
 
-    auto * dtb1 = new DetermineTowerBackground( "DetermineTowerBackground1" );
-    dtb1 -> SetBackgroundOutputName( "TowerInfoBackground_Sub1" );
-    dtb1 -> set_jetnode( sub1_seed_raw );
-    dtb1 -> set_towerNodePrefix( HIJETS::tower_prefix );
-    dtb1 -> SetFlow( 0 );
-    dtb1 -> SetSeedType( 0 );
-    dtb1 -> SetSeedJetPt( 5.0 );
-    dtb1 -> SetSeedJetD( 3.0 );
-    dtb1 -> SetSeedMaxConst( 3.0 );
-    dtb1 -> Verbosity( 0 );
-    dtb1 -> UseReweighting( true );
-    se -> registerSubsystem( dtb1 );
+    // auto * dtb1 = new DetermineTowerBackground( "DetermineTowerBackground1" );
+    // dtb1 -> SetBackgroundOutputName( "TowerInfoBackground_Sub1" );
+    // dtb1 -> set_jetnode( sub1_seed_raw );
+    // dtb1 -> set_towerNodePrefix( HIJETS::tower_prefix );
+    // dtb1 -> SetFlow( 0 );
+    // dtb1 -> SetSeedType( 0 );
+    // dtb1 -> SetSeedJetPt( 5.0 );
+    // dtb1 -> SetSeedJetD( 3.0 );
+    // dtb1 -> SetSeedMaxConst( 3.0 );
+    // dtb1 -> Verbosity( 0 );
+    // dtb1 -> UseReweighting( true );
+    // se -> registerSubsystem( dtb1 );
 
-    auto * casj1 = new CopyAndSubtractJets( "CopyAndSubtractJets" );
-    casj1 -> set_iter1_background( "TowerInfoBackground_Sub1" );
-    casj1 -> set_rawseednode( sub1_seed_raw );
-    casj1 -> set_subseednode( sub1_seed_sub );
-    casj1 -> set_towerNodePrefix( HIJETS::tower_prefix );
-    casj1 -> SetFlowModulation( 0 );
-    casj1 -> Verbosity( 0 );
-    casj1 -> set_towerinfo( true );
-    se -> registerSubsystem( casj1 );
+    // auto * casj1 = new CopyAndSubtractJets( "CopyAndSubtractJets" );
+    // casj1 -> set_iter1_background( "TowerInfoBackground_Sub1" );
+    // casj1 -> set_rawseednode( sub1_seed_raw );
+    // casj1 -> set_subseednode( sub1_seed_sub );
+    // casj1 -> set_towerNodePrefix( HIJETS::tower_prefix );
+    // casj1 -> SetFlowModulation( 0 );
+    // casj1 -> Verbosity( 0 );
+    // casj1 -> set_towerinfo( true );
+    // se -> registerSubsystem( casj1 );
 
-    auto * dtb2 = new DetermineTowerBackground( "DetermineTowerBackground_Sub1" );
-    dtb2 -> SetBackgroundOutputName( "TowerInfoBackground_Sub2" );
-    dtb2 -> set_jetnode( sub1_seed_sub );
-    dtb2 -> set_towerNodePrefix( HIJETS::tower_prefix );
-    dtb2 -> SetFlow( 0 );
-    dtb2 -> SetSeedType( 1 );
-    dtb2 -> SetSeedJetPt( 7.0 );
-    dtb2 -> Verbosity( 0 );
-    dtb2 -> UseReweighting( true );
-    se -> registerSubsystem( dtb2 );
+    // auto * dtb2 = new DetermineTowerBackground( "DetermineTowerBackground_Sub1" );
+    // dtb2 -> SetBackgroundOutputName( "TowerInfoBackground_Sub2" );
+    // dtb2 -> set_jetnode( sub1_seed_sub );
+    // dtb2 -> set_towerNodePrefix( HIJETS::tower_prefix );
+    // dtb2 -> SetFlow( 0 );
+    // dtb2 -> SetSeedType( 1 );
+    // dtb2 -> SetSeedJetPt( 7.0 );
+    // dtb2 -> Verbosity( 0 );
+    // dtb2 -> UseReweighting( true );
+    // se -> registerSubsystem( dtb2 );
 
-    auto * st1 = new SubtractTowers( "SubtractTowers" );
-    st1 -> set_towerNodePrefix( HIJETS::tower_prefix );
-    st1 -> set_inputTowerBackgroundNode( "TowerInfoBackground_Sub2" );
-    st1 -> SetFlowModulation( 0 );
-    st1 -> Verbosity( 0 );
-    st1 -> set_towerinfo( true );
-    se -> registerSubsystem( st1 );
+    // auto * st1 = new SubtractTowers( "SubtractTowers" );
+    // st1 -> set_towerNodePrefix( HIJETS::tower_prefix );
+    // st1 -> set_inputTowerBackgroundNode( "TowerInfoBackground_Sub2" );
+    // st1 -> SetFlowModulation( 0 );
+    // st1 -> Verbosity( 0 );
+    // st1 -> set_towerinfo( true );
+    // se -> registerSubsystem( st1 );
 
-    tjr = new JetReco( "TowerJetReco_Sub1" );
-    for ( const auto & src : { Jet::CEMC_TOWERINFO_SUB1 ,  Jet::HCALIN_TOWERINFO_SUB1, Jet::HCALOUT_TOWERINFO_SUB1  } )
-    {
-        tjr -> add_input( GetTowerInput( src , "TOWERINFO_CALIB" ) );
-    }
-    for ( const auto & R : jetRs )
-    {
-        tjr -> add_algo( HIJETS::GetFJAlgo( R ), Form( "AntiKt_TowerInfo_r0%d_Sub1", static_cast<int>( R * 10 ) ) );
-    }
-    tjr -> set_algo_node( "ANTIKT" );
-    tjr -> set_input_node( "TOWER" );
-    tjr -> Verbosity( 0 );
-    se -> registerSubsystem( tjr );
+    // tjr = new JetReco( "TowerJetReco_Sub1" );
+    // for ( const auto & src : { Jet::CEMC_TOWERINFO_SUB1 ,  Jet::HCALIN_TOWERINFO_SUB1, Jet::HCALOUT_TOWERINFO_SUB1  } )
+    // {
+    //     tjr -> add_input( GetTowerInput( src , "TOWERINFO_CALIB" ) );
+    // }
+    // for ( const auto & R : jetRs )
+    // {
+    //     tjr -> add_algo( HIJETS::GetFJAlgo( R ), Form( "AntiKt_TowerInfo_r0%d_Sub1", static_cast<int>( R * 10 ) ) );
+    // }
+    // tjr -> set_algo_node( "ANTIKT" );
+    // tjr -> set_input_node( "TOWER" );
+    // tjr -> Verbosity( 0 );
+    // se -> registerSubsystem( tjr );
 
-    const std::string rho_eta_calib_path = "/sphenix/user/tmengel/dijet-ana-auau/macros/rho_calib/calibs/rho_calib_mb_hijing_scaled.root";
+    const std::string rho_eta_calib_path = "/sphenix/user/tmengel/dijet-ana-auau/macros/rho_calib/calibs/rho_calib_mb_hijing_unsclaed.root";
     auto * subrho = new SubtractTowersRhov1(  "SubtractTowersRho_CEMC_Mult" );
     subrho -> set_rhoNode("TowerRho_MULT_CEMC");
     subrho -> add_targetTowerNode( "TOWERINFO_CALIB_CEMC_RETOWER" );
@@ -276,50 +287,50 @@ void Fun4All_UEScaling_Pass3 (
     {
         tjr -> add_input( GetTowerInput( src , "MULTSUB_TOWERINFO_CALIB" ) );
     }
-    for ( const auto & R : jetRs )
+    for ( const auto & R : {0.3} )
     {
         tjr -> add_algo( HIJETS::GetFJAlgo( R ), Form( "AntiKt_TowerInfo_r0%d_Rho", static_cast<int>( R * 10 ) ) );
     }
     tjr -> set_algo_node( "ANTIKT" );
     tjr -> set_input_node( "TOWER" );
-    tjr -> Verbosity( 0 );
+    // tjr -> Verbosity( 10 );
     se -> registerSubsystem( tjr );
 
-    // auto * dtb = new DetermineTowerBackgroundv1( "DetermineTowerBackground_Sub1" );
-    // dtb -> SetBackgroundOutputName( "TowerInfoBackground_Rho" );
-    // dtb -> SetVertexType( GlobalVertex::MBD );
-    // dtb -> SetFlowMode( 0 );
-    // dtb -> SetPsi2Mode( 0 );
-    // dtb -> SetNOmitSeeds( 2 );
-    // dtb -> SetEtaCalib_DirectPath("/sphenix/user/tmengel/JetUESub-JSTG-TF03/calibrations/rho_plots/rho_eta_calib_cdb.root");
-    // dtb -> SetSeedJetName( rho_kt_seed );
-    // dtb -> SetCEMC_RhoNode("TowerRho_MULT_CEMC");
-    // dtb -> SetIHCAL_RhoNode("TowerRho_MULT_HCALIN");
-    // dtb -> SetOHCAL_RhoNode("TowerRho_MULT_HCALOUT");
-    // dtb -> Verbosity( 0 );
-    // se -> registerSubsystem( dtb );
+    auto * dtb = new DetermineTowerBackgroundv1( "DetermineTowerBackground_Sub1" );
+    dtb -> SetBackgroundOutputName( "TowerInfoBackground_Rho" );
+    dtb -> SetVertexType( GlobalVertex::MBD );
+    dtb -> SetFlowMode( 0 );
+    dtb -> SetPsi2Mode( 0 );
+    dtb -> SetNOmitSeeds( 2 );
+    dtb -> SetEtaCalib_DirectPath(rho_eta_calib_path);
+    dtb -> SetSeedJetName( rho_kt_seed );
+    dtb -> SetCEMC_RhoNode("TowerRho_MULT_CEMC");
+    dtb -> SetIHCAL_RhoNode("TowerRho_MULT_HCALIN");
+    dtb -> SetOHCAL_RhoNode("TowerRho_MULT_HCALOUT");
+    dtb -> Verbosity( 0 );
+    se -> registerSubsystem( dtb );
     
-    // auto * subtower = new SubtractTowers( "SubtractTowers" );
-    // subtower -> set_inputTowerBackgroundNode( "TowerInfoBackground_Rho" );
-    // subtower -> set_towerNodePrefix( "TOWERINFO_CALIB" );
-    // subtower -> SetFlowModulation( 0 );
-    // subtower -> Verbosity( 0 );
-    // subtower -> set_towerinfo( true );
-    // se -> registerSubsystem( subtower );
+    auto * subtower = new SubtractTowers( "SubtractTowers" );
+    subtower -> set_inputTowerBackgroundNode( "TowerInfoBackground_Rho" );
+    subtower -> set_towerNodePrefix( "TOWERINFO_CALIB" );
+    subtower -> SetFlowModulation( 0 );
+    subtower -> Verbosity( 0 );
+    subtower -> set_towerinfo( true );
+    se -> registerSubsystem( subtower );
 
-    // tjr = new JetReco( "TowerJetReco_Sub1" );
-    // for (const auto & src : { Jet::CEMC_TOWERINFO_SUB1, Jet::HCALIN_TOWERINFO_SUB1, Jet::HCALOUT_TOWERINFO_SUB1 })
-    // {
-    //     tjr -> add_input( GetTowerInput( src , "TOWERINFO_CALIB" ) );
-    // }
-    // for ( const auto & R : { jetR } )
-    // {
-    //     tjr -> add_algo( HIJETS::GetFJAlgo( R ), Form( "AntiKt_TowerInfo_r0%d_Sub1", static_cast<int>( R * 10 ) ) );
-    // }
-    // tjr -> set_algo_node( "ANTIKT" );
-    // tjr -> set_input_node( "TOWER" );
-    // tjr -> Verbosity( 0 );
-    // se -> registerSubsystem( tjr );
+    tjr = new JetReco( "TowerJetReco_Sub1" );
+    for (const auto & src : { Jet::CEMC_TOWERINFO_SUB1, Jet::HCALIN_TOWERINFO_SUB1, Jet::HCALOUT_TOWERINFO_SUB1 })
+    {
+        tjr -> add_input( GetTowerInput( src , "TOWERINFO_CALIB" ) );
+    }
+    for ( const auto & R : { 0.3 } )
+    {
+        tjr -> add_algo( HIJETS::GetFJAlgo( R ), Form( "AntiKt_TowerInfo_r0%d_Sub1", static_cast<int>( R * 10 ) ) );
+    }
+    tjr -> set_algo_node( "ANTIKT" );
+    tjr -> set_input_node( "TOWER" );
+    tjr -> Verbosity( 10 );
+    se -> registerSubsystem( tjr );
 
     auto * anaout = new AnaTreev1( outfile );
     anaout -> Verbosity( Enable::VERBOSITY );
@@ -330,14 +341,14 @@ void Fun4All_UEScaling_Pass3 (
     anaout -> add_event_header( "EventHeader" );
 
     //  bool do_truth = true;
-    if ( jetId > 0 ) 
-    {
-        anaout -> add_phHep_node( "PHHepMCGenEventMap" );
-        anaout -> add_truth_jet_node( "AntiKt_Truth_r03" );
-    }
+    // if ( jetId > 0 ) 
+    // {
+    //     anaout -> add_phHep_node( "PHHepMCGenEventMap" );
+    //     anaout -> add_truth_jet_node( "AntiKt_Truth_r03" );
+    // }
     
-    anaout -> add_sub1_jet_node( "AntiKt_TowerInfo_r03_Sub1", "TowerInfoBackground_Sub2" );
-    anaout -> add_towerbkgd_v2_node( "TowerInfoBackground_Sub2" );
+    // anaout -> add_sub1_jet_node( "AntiKt_TowerInfo_r03_Sub1", "TowerInfoBackground_Sub2" );
+    // anaout -> add_towerbkgd_v2_node( "TowerInfoBackground_Sub2" );
 
     anaout -> add_rho_jet_node( "AntiKt_TowerInfo_r03_Rho" , "TowerRho_MULT_CEMC", "TowerRho_MULT_HCALIN", "TowerRho_MULT_HCALOUT" );
     for ( const auto & rho_node : { "TowerRho_MULT_CEMC", "TowerRho_MULT_HCALIN", "TowerRho_MULT_HCALOUT" } )
