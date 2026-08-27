@@ -1,6 +1,9 @@
 # install
 install/
 
+macros/jesjer
+macros/rho_calib
+
 src/coresoftware/
 # for dstlists
 *.list
