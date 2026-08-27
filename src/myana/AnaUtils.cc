@@ -347,6 +347,8 @@ void AnaUtils::book_matched_jet_tree( TTree * tree, MatchedJetRow & row )
     tree -> Branch( "truth_eta", &row.truth_eta, "truth_eta/F" );
     tree -> Branch( "truth_phi", &row.truth_phi, "truth_phi/F" );
     tree -> Branch( "truth_flavor", &row.truth_flavor, "truth_flavor/I" );
+    tree -> Branch( "truth_parton_pt", &row.truth_parton_pt, "truth_parton_pt/F" );
+    tree -> Branch( "truth_parton_dr", &row.truth_parton_dr, "truth_parton_dr/F" );
 
     tree -> Branch( "reco_pt", &row.reco_pt, "reco_pt/F" );
     tree -> Branch( "reco_e", &row.reco_e, "reco_e/F" );
@@ -376,6 +378,8 @@ void AnaUtils::read_matched_jet_tree( TTree * tree, MatchedJetRow & row )
     tree -> SetBranchAddress( "truth_eta", &row.truth_eta );
     tree -> SetBranchAddress( "truth_phi", &row.truth_phi );
     tree -> SetBranchAddress( "truth_flavor", &row.truth_flavor );
+    tree -> SetBranchAddress( "truth_parton_pt", &row.truth_parton_pt );
+    tree -> SetBranchAddress( "truth_parton_dr", &row.truth_parton_dr );
 
     tree -> SetBranchAddress( "reco_pt", &row.reco_pt );
     tree -> SetBranchAddress( "reco_e", &row.reco_e );

@@ -139,6 +139,7 @@ int AnaTreev1::Init( PHCompositeNode * /*topNode*/ )
         {
             m_tree -> Branch( "truth_jet_flavor", &m_truth_jet_flavor );
             m_tree -> Branch( "truth_jet_parton_pT", &m_truth_jet_parton_pT );
+            m_tree -> Branch( "truth_jet_parton_dr", &m_truth_jet_parton_dr );
             m_tree -> Branch( "truth_zvtx", &m_truth_zvtx, "truth_zvtx/F" );
             m_tree -> Branch( "truth_jet_R", &m_truth_jet_R, "truth_jet_R/F" );
             m_tree -> Branch( "truth_jet_maxpT_r04", &m_truth_jet_maxpT_r04, "truth_jet_maxpT_r04/F" );
@@ -478,6 +479,7 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
         m_truth_jet_pT.clear();
         m_truth_jet_flavor.clear();
         m_truth_jet_parton_pT.clear();
+        m_truth_jet_parton_dr.clear();
         m_truth_jet_R = -1;
         m_truth_jet_maxpT_r04 = -1;
 
@@ -589,6 +591,7 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
 
             int flavor = -1;
             float max_pt = 0;
+            float min_dr = 999;
             for (
                 HepMC::GenEvent::particle_const_iterator p = hepmc_event->particles_begin();
 		        p != hepmc_event->particles_end();
@@ -637,10 +640,11 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
                 float dr = sqrt(deta*deta + dphi*dphi);
 
                 // Match closest parton with highest pT
-                if (dr < 0.4 && part_pt > max_pt)
+                if (dr < 2*m_truth_jet_R && part_pt > max_pt)
                 {
                     max_pt = part_pt;
                     flavor = pid;
+                    min_dr = dr;
                 }
 		    }
 
@@ -650,6 +654,7 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
             m_truth_jet_pT.push_back(pt);
             m_truth_jet_flavor.push_back(flavor);
             m_truth_jet_parton_pT.push_back(max_pt);
+            m_truth_jet_parton_dr.push_back(min_dr);
         }
 
     }

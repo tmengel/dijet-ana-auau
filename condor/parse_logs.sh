@@ -1,16 +1,16 @@
 #!/bin/bash
 
-LOGDIR="/sphenix/user/tmengel/dijet-ana-auau/condor/logs/08_14_2026_v001"
+LOGDIR="/sphenix/user/tmengel/dijet-ana-auau/condor/logs/match/08_23_2026_v001"
 
-echo "Scanning ${LOGDIR}/*.out for ERROR..."
+echo "Scanning ${LOGDIR}/*.out for Error:"
 echo
 
 FOUND=0
 
-for LOGFILE in "$LOGDIR"/*.out; do
+for LOGFILE in "$LOGDIR"/*/*.out; do
     [[ -e "$LOGFILE" ]] || continue
 
-    if grep -q "ERROR" "$LOGFILE"; then
+    if grep -q "Error" "$LOGFILE"; then
         FOUND=1
 
         BASENAME=$(basename "$LOGFILE")

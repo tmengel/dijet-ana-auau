@@ -165,6 +165,8 @@ namespace AnaUtils
        float truth_eta    { -999.0f };
        float truth_phi    { -999.0f };
        int   truth_flavor { -999 };
+       float truth_parton_pt { -999.0f };
+       float truth_parton_dr { -999.0f };
 
        // matched reco jet
        float reco_pt        { -999.0f };
