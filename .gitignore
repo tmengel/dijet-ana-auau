@@ -5,6 +5,9 @@ src/coresoftware/
 # for dstlists
 *.list
 
+*.job
+condor/*.sh
+
 # for root files
 *.root
 
