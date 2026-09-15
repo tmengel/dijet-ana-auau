@@ -19,6 +19,8 @@ pkginclude_HEADERS = \
   EventCutReport.h \
   EventSelector.h \
   MinBiasCut.h \
+  RhoEtaCalibLookup.h \
+  RhoSubDebug.h \
   TriggerSelect.h \
   ZVertexCut.h 
 
@@ -32,6 +34,7 @@ libmyana_la_SOURCES = \
   EventCutReport.cc \
   EventSelector.cc \
   MinBiasCut.cc \
+  RhoSubDebug.cc \
   TriggerSelect.cc \
   ZVertexCut.cc 
 
@@ -49,7 +52,9 @@ libmyana_la_LIBADD = \
   -lphhepmc_io \
   -lphhepmc \
   -lepd_io \
-  -lSubsysReco
+  -lSubsysReco \
+  -lfastjet \
+  -lfastjettools
 
 
 BUILT_SOURCES = testexternals.cc

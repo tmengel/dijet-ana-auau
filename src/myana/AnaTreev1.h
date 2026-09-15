@@ -11,6 +11,8 @@
 
 class PHCompositeNode;
 
+class Jet;
+
 class TowerInfoContainer;
 class RawTowerGeomContainer;
 
@@ -48,20 +50,28 @@ class AnaTreev1 : public SubsysReco
     m_sub1_jet_node = name; 
     m_sub1_jet_towerbkgd_node = towerbkgd_node;
   }  
+  // JetCalib output built from the sub1 jet node (same jet order)
+  void add_sub1_jet_calib_node ( const std::string & name ) { m_sub1_jet_calib_node = name; }
   void add_towerbkgd_v2_node( const std::string & name ) { m_towerbkgd_v2_node = name; }
 
-  void add_rho_jet_node ( 
+  // sub_tower_prefix: prefix of the SubtractTowersRhov1 output towers the rho
+  // jets were clustered from ( <subSuffix>_TOWERINFO_CALIB )
+  void add_rho_jet_node (
     const std::string & name,
     const std::string & cemcnode ,
     const std::string & hcalincode ,
-    const std::string & hcaloutcode 
+    const std::string & hcaloutcode ,
+    const std::string & sub_tower_prefix = "MULTSUB_TOWERINFO_CALIB"
   )
   {
     m_rho_jet_node = name;
     m_rho_jet_cemc_rho_node = cemcnode;
     m_rho_jet_hcalin_rho_node = hcalincode;
     m_rho_jet_hcalout_rho_node = hcaloutcode;
+    m_rho_jet_sub_tower_prefix = sub_tower_prefix;
   }
+  // JetCalib output built from the rho jet node (same jet order)
+  void add_rho_jet_calib_node ( const std::string & name ) { m_rho_jet_calib_node = name; }
   void add_rho_nodes ( const std::string & node )
   {
     m_rho_nodes.push_back( node );
@@ -129,6 +139,12 @@ class AnaTreev1 : public SubsysReco
   float m_mbd_q_S { -999.0 };
   float m_mbd_t_N { -999.0 };
   float m_mbd_t_S { -999.0 };
+  float m_mbd_t0 { -999.0 };
+  float m_mbd_t0err { -999.0 };
+  float m_mbd_zvtx { -999.0 };
+  float m_mbd_zvtxerr { -999.0 };
+  int m_mbd_npmt_N { -1 };
+  int m_mbd_npmt_S { -1 };
 
   std::string m_phHep_node { "" };
   std::string m_truth_jet_node { "" };
@@ -186,6 +202,8 @@ class AnaTreev1 : public SubsysReco
   std::vector < float > m_sub1_jet_phi {};
   std::vector < float > m_sub1_jet_eta {};
   std::vector < float > m_sub1_jet_pT {};
+  std::string m_sub1_jet_calib_node { "" };
+  std::vector < float > m_sub1_jet_calib_pT {};
   std::vector < float > m_sub1_jet_unsub_pT {};
   std::vector < float > m_sub1_jet_unsub_E {};
   std::vector < std::vector < float > > m_sub1_jet_constituent_E {};
@@ -214,6 +232,9 @@ class AnaTreev1 : public SubsysReco
   std::vector < float > m_rho_jet_phi {};
   std::vector < float > m_rho_jet_eta {};
   std::vector < float > m_rho_jet_pT {};
+  std::string m_rho_jet_sub_tower_prefix { "MULTSUB_TOWERINFO_CALIB" };
+  std::string m_rho_jet_calib_node { "" };
+  std::vector < float > m_rho_jet_calib_pT {};
   std::vector < float > m_rho_jet_unsub_pT {};
   std::vector < float > m_rho_jet_unsub_E {};
   std::vector < std::vector < float > > m_rho_jet_constituent_E {};
@@ -227,10 +248,33 @@ class AnaTreev1 : public SubsysReco
   std::vector< float > m_rho_vals {};
   std::vector< float > m_rho_sigmas {};
 
-  RawTowerDefs::CalorimeterId m_caloid = RawTowerDefs::CalorimeterId::NONE;
-  TowerInfoContainer    * m_towerinfos = nullptr;
-  RawTowerGeomContainer * m_towergeom  = nullptr;
- 
+  // towers backing one calorimeter layer (0 = CEMC retower, 1 = HCALIN, 2 = HCALOUT)
+  struct LayerTowers
+  {
+    TowerInfoContainer    * sub   { nullptr }; // towers the jets were clustered from
+    TowerInfoContainer    * unsub { nullptr }; // same channels before UE subtraction
+    RawTowerGeomContainer * geom  { nullptr };
+    double radius { 0.0 };
+  };
+
+  struct JetConstituents
+  {
+    float unsub_px { 0.0 };
+    float unsub_py { 0.0 };
+    float unsub_pz { 0.0 };
+    float unsub_E  { 0.0 };
+    std::vector < float > E {};
+    std::vector < float > phi {};
+    std::vector < float > eta {};
+    std::vector < float > pT {};
+    std::vector < int > srcID {};
+  };
+
+  // sub_node_prefix/suffix name the subtracted towers, e.g.
+  // TOWERINFO_CALIB + _SUB1 or MULTSUB_TOWERINFO_CALIB + ""
+  void LoadLayerTowers( PHCompositeNode * topNode, const std::string & sub_node_prefix, const std::string & sub_node_suffix, LayerTowers layers[3] );
+  void FillJetConstituents( Jet * jet, const LayerTowers layers[3], JetConstituents & out ) const;
+
   TowerInfoContainer * LoadTowerInfoContainer( PHCompositeNode *topNode, const std::string & name );
   RawTowerGeomContainer * LoadTowerGeomContainer( PHCompositeNode *topNode, const std::string & name );
 };

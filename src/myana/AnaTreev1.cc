@@ -44,7 +44,7 @@
 #include <jetbase/Jetv2.h>
 #include <jetbase/JetContainerv1.h>
 
-#include <mbd/MbdOutV2.h>
+#include <mbd/MbdOut.h>
 
 #include <jetbackground/TowerBackgroundv1.h>
 #include <jetbackground/TowerRhov1.h>
@@ -127,6 +127,12 @@ int AnaTreev1::Init( PHCompositeNode * /*topNode*/ )
         m_tree -> Branch( "mbd_q_S", &m_mbd_q_S, "mbd_q_S/F" );
         m_tree -> Branch( "mbd_t_N", &m_mbd_t_N, "mbd_t_N/F" );
         m_tree -> Branch( "mbd_t_S", &m_mbd_t_S, "mbd_t_S/F" );
+        m_tree -> Branch( "mbd_t0", &m_mbd_t0, "mbd_t0/F" );
+        m_tree -> Branch( "mbd_t0err", &m_mbd_t0err, "mbd_t0err/F" );
+        m_tree -> Branch( "mbd_zvtx", &m_mbd_zvtx, "mbd_zvtx/F" );
+        m_tree -> Branch( "mbd_zvtxerr", &m_mbd_zvtxerr, "mbd_zvtxerr/F" );
+        m_tree -> Branch( "mbd_npmt_N", &m_mbd_npmt_N, "mbd_npmt_N/I" );
+        m_tree -> Branch( "mbd_npmt_S", &m_mbd_npmt_S, "mbd_npmt_S/I" );
     }
 
     if ( !m_truth_jet_node.empty() ) 
@@ -222,6 +228,10 @@ int AnaTreev1::Init( PHCompositeNode * /*topNode*/ )
         m_tree  -> Branch( "sub1_jet_phi", &m_sub1_jet_phi );
         m_tree  -> Branch( "sub1_jet_eta", &m_sub1_jet_eta );
         m_tree  -> Branch( "sub1_jet_pT", &m_sub1_jet_pT );
+        if ( !m_sub1_jet_calib_node.empty() )
+        {
+            m_tree  -> Branch( "sub1_jet_calib_pT", &m_sub1_jet_calib_pT );
+        }
         m_tree  -> Branch( "sub1_jet_unsub_pT", &m_sub1_jet_unsub_pT );
         m_tree  -> Branch( "sub1_jet_unsub_E", &m_sub1_jet_unsub_E );
         m_tree  -> Branch( "sub1_jet_constituent_E", &m_sub1_jet_constituent_E );
@@ -246,6 +256,10 @@ int AnaTreev1::Init( PHCompositeNode * /*topNode*/ )
         m_tree  -> Branch( "rho_jet_phi", &m_rho_jet_phi );
         m_tree  -> Branch( "rho_jet_eta", &m_rho_jet_eta );
         m_tree  -> Branch( "rho_jet_pT", &m_rho_jet_pT );
+        if ( !m_rho_jet_calib_node.empty() )
+        {
+            m_tree  -> Branch( "rho_jet_calib_pT", &m_rho_jet_calib_pT );
+        }
         m_tree  -> Branch( "rho_jet_unsub_pT", &m_rho_jet_unsub_pT );
         m_tree  -> Branch( "rho_jet_unsub_E", &m_rho_jet_unsub_E );
         m_tree  -> Branch( "rho_jet_constituent_E", &m_rho_jet_constituent_E );
@@ -453,19 +467,33 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
         m_mbd_q_S = -999;
         m_mbd_t_N = -999;
         m_mbd_t_S = -999;
-        auto * mbd_node = findNode::getClass< MbdOutV2 >( topNode, m_mbd_node );
-        if ( !mbd_node ) 
+        m_mbd_t0 = -999;
+        m_mbd_t0err = -999;
+        m_mbd_zvtx = -999;
+        m_mbd_zvtxerr = -999;
+        m_mbd_npmt_N = -1;
+        m_mbd_npmt_S = -1;
+        auto * mbd_node = findNode::getClass< MbdOut >( topNode, m_mbd_node );
+        if ( !mbd_node )
         {
-            std::cout << PHWHERE << m_mbd_node << " node missing, skipping event." << std::endl;
+            std::cout << PHWHERE << m_mbd_node << " node missing, Abort!" << std::endl;
             return Fun4AllReturnCodes::ABORTRUN;
         }
+        // arm 0 = south, arm 1 = north; times/t0/zvtx are NaN when not reconstructed
         m_mbd_q_N = mbd_node -> get_q(1);
         m_mbd_q_S = mbd_node -> get_q(0);
         m_mbd_t_N = mbd_node -> get_time(1);
         m_mbd_t_S = mbd_node -> get_time(0);
-        if ( Verbosity() > 1 ) 
+        m_mbd_t0 = mbd_node -> get_t0();
+        m_mbd_t0err = mbd_node -> get_t0err();
+        m_mbd_zvtx = mbd_node -> get_zvtx();
+        m_mbd_zvtxerr = mbd_node -> get_zvtxerr();
+        m_mbd_npmt_N = mbd_node -> get_npmt(1);
+        m_mbd_npmt_S = mbd_node -> get_npmt(0);
+        if ( Verbosity() > 1 )
         {
-            std::cout << PHWHERE << " - mbd_q_N = " << m_mbd_q_N << ", mbd_q_S = " << m_mbd_q_S << ", mbd_t_N = " << m_mbd_t_N << ", mbd_t_S = " << m_mbd_t_S << std::endl;
+            std::cout << PHWHERE << " - mbd_q_N = " << m_mbd_q_N << ", mbd_q_S = " << m_mbd_q_S << ", mbd_t_N = " << m_mbd_t_N << ", mbd_t_S = " << m_mbd_t_S
+                      << ", mbd_t0 = " << m_mbd_t0 << ", mbd_zvtx = " << m_mbd_zvtx << std::endl;
         }
 
     }
@@ -592,7 +620,8 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
             int flavor = -1;
             float max_pt = 0;
             float min_dr = 999;
-            for (
+            // no HepMC node configured / found: leave the flavor defaults
+            if ( hepmc_event ) for (
                 HepMC::GenEvent::particle_const_iterator p = hepmc_event->particles_begin();
 		        p != hepmc_event->particles_end();
                 ++p
@@ -659,14 +688,41 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
 
     }
 
-    if ( !m_sub1_jet_node.empty() ) 
-    { 
-        
+    if ( !m_jet_node.empty() )
+    {
+        // unsubtracted reco jets
+        m_jet_R = -1;
+        m_jet_E.clear();
+        m_jet_phi.clear();
+        m_jet_eta.clear();
+        m_jet_pT.clear();
+
+        auto * jets = findNode::getClass<JetContainer>( topNode, m_jet_node );
+        if ( !jets )
+        {
+            std::cout << PHWHERE << " Input node " << m_jet_node << " Node missing, Abort!" << std::endl;
+            return Fun4AllReturnCodes::ABORTRUN;
+        }
+        m_jet_R = jets->get_par();
+
+        for ( const auto & jet : * jets )
+        {
+            m_jet_E.push_back(jet->get_e());
+            m_jet_eta.push_back(jet->get_eta());
+            m_jet_phi.push_back(jet->get_phi());
+            m_jet_pT.push_back(jet->get_pt());
+        }
+    }
+
+    if ( !m_sub1_jet_node.empty() )
+    {
+
         m_sub1_jet_R = -1;
         m_sub1_jet_E.clear();
         m_sub1_jet_phi.clear();
         m_sub1_jet_eta.clear();
         m_sub1_jet_pT.clear();
+        m_sub1_jet_calib_pT.clear();
         m_sub1_jet_unsub_pT.clear();
         m_sub1_jet_unsub_E.clear();
         m_sub1_jet_constituent_E.clear();
@@ -710,151 +766,49 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
         }
         
 
+        JetContainer * calib_jets = nullptr;
+        if ( !m_sub1_jet_calib_node.empty() )
+        {
+            calib_jets = findNode::getClass<JetContainer>( topNode, m_sub1_jet_calib_node );
+            if ( !calib_jets )
+            {
+                std::cout << PHWHERE << " Input node " << m_sub1_jet_calib_node << " Node missing, Abort!" << std::endl;
+                return Fun4AllReturnCodes::ABORTRUN;
+            }
+            // JetCalib writes one calibrated jet per input jet, in input order
+            if ( calib_jets->size() != jets->size() )
+            {
+                std::cout << PHWHERE << " " << m_sub1_jet_calib_node << " has " << calib_jets->size() << " jets but " << m_sub1_jet_node << " has " << jets->size() << ", Abort!" << std::endl;
+                return Fun4AllReturnCodes::ABORTRUN;
+            }
+        }
+
+        LayerTowers layers[3];
+        LoadLayerTowers( topNode, "TOWERINFO_CALIB", "_SUB1", layers );
+
+        unsigned int ijet = 0;
         for ( const auto & jet : * jets )
         {
-            
-            float unsub_pz = 0;
-            float unsub_px = 0; 
-            float unsub_py = 0;
-            float unsub_E  = 0;
-            std::vector<float> constituent_E {};
-            std::vector<float> constituent_phi {};
-            std::vector<float> constituent_eta {};
-            std::vector<float> constituent_pT {};
-            std::vector<int> constituent_srcID {};
-            for ( const auto & comp : jet -> get_comp_vec() )
-            {
-                double tower_r = 0.0;
-                int layer_idx = -1;
-                m_caloid = RawTowerDefs::CalorimeterId::NONE;
-                m_towerinfos = nullptr;
-                m_towergeom = nullptr;
-                if( comp.first == Jet::SRC::HCALIN_TOWERINFO_SUB1 )
-                {
-                    // const float CALO_RADIUS[3] = {93.5, 127.503, 225.87};
-                    m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_HCALIN_SUB1" );
-                    m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALIN" );
-                    tower_r = 127.503;
-                    m_caloid = RawTowerDefs::CalorimeterId::HCALIN;
-                    layer_idx = 1;
-                }
-                else if ( comp.first == Jet::SRC::HCALOUT_TOWERINFO_SUB1 )
-                {
-                    m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_HCALOUT_SUB1" );
-                    m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALOUT" );
-                    tower_r = 225.87;
-                    m_caloid = RawTowerDefs::CalorimeterId::HCALOUT;
-                    layer_idx = 2;
-                }
-                else if ( comp.first == Jet::SRC::CEMC_TOWERINFO_SUB1 )
-                {
-                    m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_CEMC_RETOWER_SUB1" );
-                    m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALIN" );
-                    tower_r = 93.5;
-                    layer_idx = 0;
-                    m_caloid = RawTowerDefs::CalorimeterId::HCALIN; // use hcalin geometry for cemc towers since we just want eta/phi and the r is only used for calculating unsub pT which will be corrected by UE subtraction
-                }
-                else if ( comp.first == Jet::SRC::HCALIN_TOWERINFO )
-                {
-                    m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_HCALIN" );
-                    m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALIN" );
-                    tower_r = 127.503;
-                    m_caloid = RawTowerDefs::CalorimeterId::HCALIN;
-                    layer_idx = 1;
-                }
-                else if ( comp.first == Jet::SRC::HCALOUT_TOWERINFO )
-                {
-                    m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_HCALOUT" );
-                    m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALOUT" );
-                    tower_r = 225.87;
-                    m_caloid = RawTowerDefs::CalorimeterId::HCALOUT;
-                    layer_idx = 2;
-                }
-                else if ( comp.first == Jet::SRC::CEMC_TOWERINFO_RETOWER )
-                {
-                    m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_CEMC_RETOWER" );
-                    m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALIN" );
-                    tower_r = 93.5;
-                    layer_idx = 0;
-                    m_caloid = RawTowerDefs::CalorimeterId::HCALIN; // use hcalin geometry for cemc towers since we just want eta/phi and the r is only used for calculating unsub pT which will be corrected by UE subtraction
-                }
-                else 
-                {
-                    if ( Verbosity() > 3 ) 
-                    {
-                        std::cout << PHWHERE << " Warning: jet constituent with unknown source " << comp.first << ", skipping." << std::endl;
-                    }
-                    continue;
-                }
-                
-                auto * tower = m_towerinfos->get_tower_at_channel( comp.second );
-                if ( !tower || !tower->get_isGood() ) 
-                {
-                    if ( Verbosity() > 3 ) 
-                    {
-                        std::cout << PHWHERE << " Warning: constituent tower with caloid " << comp.first << " and channel " << comp.second << " not found in towerinfo container, skipping." << std::endl;
-                    }
-                    continue;
-                }
+            JetConstituents cons {};
+            FillJetConstituents( jet, layers, cons );
 
-                const auto tkey = m_towerinfos->encode_key( comp.second );
-                auto ieta = m_towerinfos->getTowerEtaBin(tkey);
-                auto iphi = m_towerinfos->getTowerPhiBin(tkey);
-                const auto key = RawTowerDefs::encode_towerid( m_caloid, ieta, iphi );
-                
-                auto * geom = m_towergeom->get_tower_geometry( key );
-                if ( !geom )
-                {
-                    if ( Verbosity() > 3 ) 
-                    {
-                        std::cout << PHWHERE << " Warning: geometry for tower with caloid " << comp.first << " and channel " << comp.second << " not found, skipping." << std::endl;
-                    }
-                    continue;
-                }
-
-                double tower_z0   = sinh( geom -> get_eta() ) * tower_r;
-                double comp_z     = tower_z0 - m_zvtx;
-                double comp_eta   =  asinh( comp_z / tower_r );
-                double comp_phi   = geom -> get_phi();
-                double comp_E     = tower->get_energy();
-                double ue         = m_sub1_jet_towerbkgd_ue[layer_idx][ieta];
-                double un_E       = comp_E + ue;
-                float un_pT = un_E / cosh( comp_eta );
-                float un_px = un_pT * cos( comp_phi );
-                float un_py = un_pT * sin( comp_phi );
-                float un_pz = un_pT * sinh( comp_eta );
-                unsub_px += un_px;
-                unsub_py += un_py;
-                unsub_pz += un_pz;
-                unsub_E  += un_E;
-
-                constituent_E.push_back(comp_E);
-                constituent_phi.push_back(comp_phi);
-                constituent_eta.push_back(comp_eta);
-                constituent_pT.push_back(un_pT);
-                constituent_srcID.push_back(static_cast<int>(comp.first));  
-
-            } // end loop over constituents
-            
-            auto * unsub_jet = new Jetv2();
-            unsub_jet->set_px(unsub_px);
-            unsub_jet->set_py(unsub_py);
-            unsub_jet->set_pz(unsub_pz);
-            unsub_jet->set_e(unsub_E);
-            
             m_sub1_jet_E.push_back(jet->get_e());
             m_sub1_jet_eta.push_back(jet->get_eta());
             m_sub1_jet_phi.push_back(jet->get_phi());
             m_sub1_jet_pT.push_back(jet->get_pt());
-            m_sub1_jet_unsub_pT.push_back(unsub_jet->get_pt());
-            m_sub1_jet_unsub_E.push_back(unsub_jet->get_e());
-            m_sub1_jet_constituent_E.push_back(constituent_E);
-            m_sub1_jet_constituent_phi.push_back(constituent_phi);
-            m_sub1_jet_constituent_eta.push_back(constituent_eta);
-            m_sub1_jet_constituent_pT.push_back(constituent_pT);
-            m_sub1_jet_constituent_srcID.push_back(constituent_srcID);
+            if ( calib_jets )
+            {
+                m_sub1_jet_calib_pT.push_back( calib_jets->get_jet(ijet)->get_pt() );
+            }
+            m_sub1_jet_unsub_pT.push_back( std::sqrt( cons.unsub_px * cons.unsub_px + cons.unsub_py * cons.unsub_py ) );
+            m_sub1_jet_unsub_E.push_back( cons.unsub_E );
+            m_sub1_jet_constituent_E.push_back( std::move( cons.E ) );
+            m_sub1_jet_constituent_phi.push_back( std::move( cons.phi ) );
+            m_sub1_jet_constituent_eta.push_back( std::move( cons.eta ) );
+            m_sub1_jet_constituent_pT.push_back( std::move( cons.pT ) );
+            m_sub1_jet_constituent_srcID.push_back( std::move( cons.srcID ) );
 
-
+            ++ijet;
         } // end loop over jets
     }   
     if ( !m_towerbkgd_v2_node.empty() )
@@ -893,6 +847,7 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
         m_rho_jet_phi.clear();
         m_rho_jet_eta.clear();
         m_rho_jet_pT.clear();
+        m_rho_jet_calib_pT.clear();
         m_rho_jet_unsub_pT.clear();
         m_rho_jet_unsub_E.clear();
         m_rho_jet_constituent_E.clear();
@@ -929,164 +884,49 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
 
         
 
+        JetContainer * calib_jets = nullptr;
+        if ( !m_rho_jet_calib_node.empty() )
+        {
+            calib_jets = findNode::getClass<JetContainer>( topNode, m_rho_jet_calib_node );
+            if ( !calib_jets )
+            {
+                std::cout << PHWHERE << " Input node " << m_rho_jet_calib_node << " Node missing, Abort!" << std::endl;
+                return Fun4AllReturnCodes::ABORTRUN;
+            }
+            // JetCalib writes one calibrated jet per input jet, in input order
+            if ( calib_jets->size() != jets->size() )
+            {
+                std::cout << PHWHERE << " " << m_rho_jet_calib_node << " has " << calib_jets->size() << " jets but " << m_rho_jet_node << " has " << jets->size() << ", Abort!" << std::endl;
+                return Fun4AllReturnCodes::ABORTRUN;
+            }
+        }
+
+        LayerTowers layers[3];
+        LoadLayerTowers( topNode, m_rho_jet_sub_tower_prefix, "", layers );
+
+        unsigned int ijet = 0;
         for ( const auto & jet : * jets )
         {
-            
-            float unsub_pz = 0;
-            float unsub_px = 0; 
-            float unsub_py = 0;
-            float unsub_E  = 0;
-            std::vector<float> constituent_E {};
-            std::vector<float> constituent_phi {};
-            std::vector<float> constituent_eta {};
-            std::vector<float> constituent_pT {};
-            std::vector<int> constituent_srcID {};
-            for ( const auto & comp : jet -> get_comp_vec() )
-            {
-                 double tower_r = 0.0;
-                    int layer_idx = -1;
-                    m_caloid = RawTowerDefs::CalorimeterId::NONE;
-                    m_towerinfos = nullptr;
-                    m_towergeom = nullptr;
-                    if( comp.first == Jet::SRC::HCALIN_TOWERINFO_SUB1 )
-                    {
-                        // const float CALO_RADIUS[3] = {93.5, 127.503, 225.87};
-                        m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_HCALIN_SUB1" );
-                        m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALIN" );
-                        tower_r = 127.503;
-                        m_caloid = RawTowerDefs::CalorimeterId::HCALIN;
-                        layer_idx = 1;
-                    }
-                    else if ( comp.first == Jet::SRC::HCALOUT_TOWERINFO_SUB1 )
-                    {
-                        m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_HCALOUT_SUB1" );
-                        m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALOUT" );
-                        tower_r = 225.87;
-                        m_caloid = RawTowerDefs::CalorimeterId::HCALOUT;
-                        layer_idx = 2;
-                    }
-                    else if ( comp.first == Jet::SRC::CEMC_TOWERINFO_SUB1 )
-                    {
-                        m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_CEMC_RETOWER_SUB1" );
-                        m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALIN" );
-                        tower_r = 93.5;
-                        layer_idx = 0;
-                        m_caloid = RawTowerDefs::CalorimeterId::HCALIN; // use hcalin geometry for cemc towers since we just want eta/phi and the r is only used for calculating unsub pT which will be corrected by UE subtraction
-                    }
-                    else if ( comp.first == Jet::SRC::HCALIN_TOWERINFO )
-                    {
-                        m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_HCALIN" );
-                        m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALIN" );
-                        tower_r = 127.503;
-                        m_caloid = RawTowerDefs::CalorimeterId::HCALIN;
-                        layer_idx = 1;
-                    }
-                    else if ( comp.first == Jet::SRC::HCALOUT_TOWERINFO )
-                    {
-                        m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_HCALOUT" );
-                        m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALOUT" );
-                        tower_r = 225.87;
-                        m_caloid = RawTowerDefs::CalorimeterId::HCALOUT;
-                        layer_idx = 2;
-                    }
-                    else if ( comp.first == Jet::SRC::CEMC_TOWERINFO_RETOWER )
-                    {
-                        m_towerinfos = LoadTowerInfoContainer( topNode, "TOWERINFO_CALIB_CEMC_RETOWER" );
-                        m_towergeom = LoadTowerGeomContainer( topNode, "TOWERGEOM_HCALIN" );
-                        tower_r = 93.5;
-                        layer_idx = 0;
-                        m_caloid = RawTowerDefs::CalorimeterId::HCALIN; // use hcalin geometry for cemc towers since we just want eta/phi and the r is only used for calculating unsub pT which will be corrected by UE subtraction
-                    }
-                    else 
-                    {
-                        if ( Verbosity() > 3 ) 
-                        {
-                            std::cout << PHWHERE << " Warning: jet constituent with unknown source " << comp.first << ", skipping." << std::endl;
-                        }
-                        continue;
-                    }
-                
-                auto * tower = m_towerinfos->get_tower_at_channel( comp.second );
-                if ( !tower || !tower->get_isGood() ) 
-                {
-                    if ( Verbosity() > 3 ) 
-                    {
-                        std::cout << PHWHERE << " Warning: constituent tower with caloid " << comp.first << " and channel " << comp.second << " not found in towerinfo container, skipping." << std::endl;
-                    }
-                    continue;
-                }
+            JetConstituents cons {};
+            FillJetConstituents( jet, layers, cons );
 
-                const auto tkey = m_towerinfos->encode_key( comp.second );
-                auto ieta = m_towerinfos->getTowerEtaBin(tkey);
-                auto iphi = m_towerinfos->getTowerPhiBin(tkey);
-                const auto key = RawTowerDefs::encode_towerid( m_caloid, ieta, iphi );
-                
-                auto * geom = m_towergeom->get_tower_geometry( key );
-                if ( !geom )
-                {
-                    if ( Verbosity() > 3 ) 
-                    {
-                        std::cout << PHWHERE << " Warning: geometry for tower with caloid " << comp.first << " and channel " << comp.second << " not found, skipping." << std::endl;
-                    }
-                    continue;
-                }
-
-                double tower_z0   = sinh( geom -> get_eta() ) * tower_r;
-                double comp_z     = tower_z0 - m_zvtx;
-                double comp_eta   =  asinh( comp_z / tower_r );
-                double comp_phi   = geom -> get_phi();
-                double comp_E     = tower->get_energy();
-                double ue = 0;
-                if ( layer_idx == 0 )
-                {
-                    ue = m_rho_jet_cemc_rho;
-                }
-                else if ( layer_idx == 1 )
-                {
-                    ue = m_rho_jet_hcalin_rho;
-                }
-                else if ( layer_idx == 2 )
-                {
-                    ue = m_rho_jet_hcalout_rho;
-                }
-                ue *= cosh(comp_eta);
-                double un_E       = comp_E + ue;
-                float un_pT = un_E / cosh( comp_eta );
-                float un_px = un_pT * cos( comp_phi );
-                float un_py = un_pT * sin( comp_phi );
-                float un_pz = un_pT * sinh( comp_eta );
-                unsub_px += un_px;
-                unsub_py += un_py;
-                unsub_pz += un_pz;
-                unsub_E  += un_E;
-
-                constituent_E.push_back(comp_E);
-                constituent_phi.push_back(comp_phi);
-                constituent_eta.push_back(comp_eta);
-                constituent_pT.push_back(un_pT);
-                constituent_srcID.push_back(static_cast<int>(comp.first));  
-
-            } // end loop over constituents
-            
-            auto * unsub_jet = new Jetv2();
-            unsub_jet->set_px(unsub_px);
-            unsub_jet->set_py(unsub_py);
-            unsub_jet->set_pz(unsub_pz);
-            unsub_jet->set_e(unsub_E);
-            
             m_rho_jet_E.push_back(jet->get_e());
             m_rho_jet_eta.push_back(jet->get_eta());
             m_rho_jet_phi.push_back(jet->get_phi());
             m_rho_jet_pT.push_back(jet->get_pt());
-            m_rho_jet_unsub_pT.push_back(unsub_jet->get_pt());
-            m_rho_jet_unsub_E.push_back(unsub_jet->get_e());
-            m_rho_jet_constituent_E.push_back(constituent_E);
-            m_rho_jet_constituent_phi.push_back(constituent_phi);
-            m_rho_jet_constituent_eta.push_back(constituent_eta);
-            m_rho_jet_constituent_pT.push_back(constituent_pT);
-            m_rho_jet_constituent_srcID.push_back(constituent_srcID);
+            if ( calib_jets )
+            {
+                m_rho_jet_calib_pT.push_back( calib_jets->get_jet(ijet)->get_pt() );
+            }
+            m_rho_jet_unsub_pT.push_back( std::sqrt( cons.unsub_px * cons.unsub_px + cons.unsub_py * cons.unsub_py ) );
+            m_rho_jet_unsub_E.push_back( cons.unsub_E );
+            m_rho_jet_constituent_E.push_back( std::move( cons.E ) );
+            m_rho_jet_constituent_phi.push_back( std::move( cons.phi ) );
+            m_rho_jet_constituent_eta.push_back( std::move( cons.eta ) );
+            m_rho_jet_constituent_pT.push_back( std::move( cons.pT ) );
+            m_rho_jet_constituent_srcID.push_back( std::move( cons.srcID ) );
 
-
+            ++ijet;
         } // end loop over jets
     }
 
@@ -1241,6 +1081,97 @@ int AnaTreev1::End( PHCompositeNode * /*topNode*/ )
   }
 
   return Fun4AllReturnCodes::EVENT_OK;
+}
+
+void AnaTreev1::LoadLayerTowers( PHCompositeNode * topNode, const std::string & sub_node_prefix, const std::string & sub_node_suffix, LayerTowers layers[3] )
+{
+    // retowered CEMC lives on the HCALIN grid
+    static const char * const k_layer_name[3] = { "CEMC_RETOWER", "HCALIN", "HCALOUT" };
+    static const char * const k_layer_geom[3] = { "TOWERGEOM_HCALIN", "TOWERGEOM_HCALIN", "TOWERGEOM_HCALOUT" };
+    for ( int i = 0; i < 3; ++i )
+    {
+        layers[i].sub    = LoadTowerInfoContainer( topNode, sub_node_prefix + "_" + k_layer_name[i] + sub_node_suffix );
+        layers[i].unsub  = LoadTowerInfoContainer( topNode, std::string( "TOWERINFO_CALIB_" ) + k_layer_name[i] );
+        layers[i].geom   = LoadTowerGeomContainer( topNode, k_layer_geom[i] );
+        layers[i].radius = m_calo_r[i];
+    }
+}
+
+void AnaTreev1::FillJetConstituents( Jet * jet, const LayerTowers layers[3], JetConstituents & out ) const
+{
+    for ( const auto & comp : jet -> get_comp_vec() )
+    {
+        int layer_idx = -1;
+        switch ( comp.first )
+        {
+            case Jet::SRC::CEMC_TOWERINFO_RETOWER:
+            case Jet::SRC::CEMC_TOWERINFO_SUB1:
+                layer_idx = 0;
+                break;
+            case Jet::SRC::HCALIN_TOWERINFO:
+            case Jet::SRC::HCALIN_TOWERINFO_SUB1:
+                layer_idx = 1;
+                break;
+            case Jet::SRC::HCALOUT_TOWERINFO:
+            case Jet::SRC::HCALOUT_TOWERINFO_SUB1:
+                layer_idx = 2;
+                break;
+            default:
+                if ( Verbosity() > 3 )
+                {
+                    std::cout << PHWHERE << " Warning: jet constituent with unknown source " << comp.first << ", skipping." << std::endl;
+                }
+                continue;
+        }
+        const auto & layer = layers[layer_idx];
+
+        auto * tower = layer.sub->get_tower_at_channel( comp.second );
+        auto * unsub_tower = layer.unsub->get_tower_at_channel( comp.second );
+        if ( !tower || !unsub_tower || !tower->get_isGood() )
+        {
+            if ( Verbosity() > 3 )
+            {
+                std::cout << PHWHERE << " Warning: constituent tower with caloid " << comp.first << " and channel " << comp.second << " not found in towerinfo container, skipping." << std::endl;
+            }
+            continue;
+        }
+
+        const auto tkey = layer.sub->encode_key( comp.second );
+        auto ieta = layer.sub->getTowerEtaBin(tkey);
+        auto iphi = layer.sub->getTowerPhiBin(tkey);
+        const auto caloid = ( layer_idx == 2 ) ? RawTowerDefs::CalorimeterId::HCALOUT : RawTowerDefs::CalorimeterId::HCALIN;
+        const auto key = RawTowerDefs::encode_towerid( caloid, ieta, iphi );
+
+        auto * geom = layer.geom->get_tower_geometry( key );
+        if ( !geom )
+        {
+            if ( Verbosity() > 3 )
+            {
+                std::cout << PHWHERE << " Warning: geometry for tower with caloid " << comp.first << " and channel " << comp.second << " not found, skipping." << std::endl;
+            }
+            continue;
+        }
+
+        double tower_z0   = sinh( geom -> get_eta() ) * layer.radius;
+        double comp_z     = tower_z0 - m_zvtx;
+        double comp_eta   = asinh( comp_z / layer.radius );
+        double comp_phi   = geom -> get_phi();
+        double comp_E     = tower->get_energy();
+        // read the pre-subtraction tower directly so the unsub jet does not
+        // depend on re-deriving the UE (flow, eta weights, rho profile)
+        double un_E       = unsub_tower->get_energy();
+        float un_pT = un_E / cosh( comp_eta );
+        out.unsub_px += un_pT * cos( comp_phi );
+        out.unsub_py += un_pT * sin( comp_phi );
+        out.unsub_pz += un_pT * sinh( comp_eta );
+        out.unsub_E  += un_E;
+
+        out.E.push_back(comp_E);
+        out.phi.push_back(comp_phi);
+        out.eta.push_back(comp_eta);
+        out.pT.push_back(un_pT);
+        out.srcID.push_back(static_cast<int>(comp.first));
+    }
 }
 
 TowerInfoContainer * AnaTreev1::LoadTowerInfoContainer(PHCompositeNode *topNode, const std::string &tower_node_name)
