@@ -50,6 +50,7 @@
 #include <myana/ZVertexCut.h>
 #include <myana/TriggerSelect.h>
 #include <myana/AnaTreev1.h>
+#include <myana/RhoEtaCalibLookup.h>
 
 R__LOAD_LIBRARY( libfun4all.so )
 R__LOAD_LIBRARY( libffamodules.so )
@@ -246,7 +247,9 @@ void Fun4All_UEScaling_Pass3 (
     tjr -> Verbosity( 0 );
     se -> registerSubsystem( tjr );
 
-    const std::string rho_eta_calib_path = "/sphenix/user/tmengel/dijet-ana-auau/macros/rho_calib/calibs/rho_calib_mb_hijing_scaled.root";
+    // rho eta-shape calibration for this run, or the dataset default
+    // (calibrations/rho_eta/README.md)
+    const std::string rho_eta_calib_path = RhoEtaCalibLookup::GetCalibPath( run_number, "scaled" );
     auto * subrho = new SubtractTowersRhov1(  "SubtractTowersRho_CEMC_Mult" );
     subrho -> set_rhoNode("TowerRho_MULT_CEMC");
     subrho -> add_targetTowerNode( "TOWERINFO_CALIB_CEMC_RETOWER" );
