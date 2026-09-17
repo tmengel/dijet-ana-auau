@@ -80,7 +80,7 @@ TowerJetInput * GetTowerInput(
 );
 
 void Fun4All_Dijets_AuAu (
-    const int nEvents                    = 100,
+    const int nEvents                    = 3,
     const std::string & infile_calo      = "DST_CALOFITTING_run2auau_pro001_pcdb001_v001-00054912-00000.root",
     const std::string & infile_zdc       = "DST_ZDC_RAW_run2auau_pro001_pcdb001_v001-00054912-00000.root",
     const std::string & infile_sepd      = "DST_SEPD_RAW_run2auau_pro001_pcdb001_v001-00054912-00000.root",
@@ -213,6 +213,7 @@ void Fun4All_Dijets_AuAu (
     dtb1 -> SetFlow( 0 );
     dtb1 -> SetSeedJetPt( 5.0 );
     dtb1 -> SetSeedJetD( 3.0 );
+    dtb1 -> SetSeedType( 0 );
     dtb1 -> SetSeedMaxConst( 3.0 );
     dtb1 -> Verbosity( 0 );
     dtb1 -> UseReweighting( true );
@@ -230,6 +231,7 @@ void Fun4All_Dijets_AuAu (
     dtb2 -> set_towerNodePrefix( "TOWERINFO_CALIB" );
     dtb2 -> SetFlow( 0 );
     dtb2 -> SetSeedJetPt( 7.0 );
+    dtb2 -> SetSeedType( 1 );
     dtb2 -> Verbosity( 0 );
     dtb2 -> UseReweighting( true );
     se -> registerSubsystem( dtb2 );
@@ -347,9 +349,9 @@ void Fun4All_Dijets_AuAu (
         anaout -> add_rho_nodes( rho_node );
     }
     anaout -> add_jet_node( "AntiKt_TowerInfo_r03" );
-    // anaout -> add_cemc_node( "MULTSUB_TOWERINFO_CALIB_CEMC_RETOWER" , true );
-    // anaout -> add_ihcal_node( "MULTSUB_TOWERINFO_CALIB_HCALIN" , true );
-    // anaout -> add_ohcal_node( "MULTSUB_TOWERINFO_CALIB_HCALOUT" , true );
+    anaout -> add_cemc_node(  "TOWERINFO_CALIB_CEMC_RETOWER" , true );
+    anaout -> add_ihcal_node( "TOWERINFO_CALIB_HCALIN" , true );
+    anaout -> add_ohcal_node( "TOWERINFO_CALIB_HCALOUT" , true );
 
     se -> registerSubsystem( anaout );
 
