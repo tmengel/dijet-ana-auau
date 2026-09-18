@@ -1,15 +1,23 @@
 # install
 install/
 
+plotting/subleading_jet_eff/v005/
+
 #things to ignore
 macros/jesjer
 macros/rho_calib
 macros/sumeT_mb
 macros/unfolding
-
+macros/random_cones
+macros/hijing/rhosub_debug
 *.pdf
 
 rootfiles/
+
+condor/
+
+calibrations/
+
 
 src/coresoftware/
 # for dstlists
