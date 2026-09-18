@@ -54,6 +54,7 @@
 #include <myana/ZVertexCut.h>
 #include <myana/TriggerSelect.h>
 #include <myana/AnaTreev1.h>
+#include <myana/RhoEtaCalibLookup.h>
 
 #include <fun4all/SubsysReco.h>
 #include <fun4all/Fun4AllReturnCodes.h>
@@ -346,18 +347,9 @@ void Fun4All_Dijets_AuAu (
     trc -> add_tower_input( GetTowerInput( Jet::HCALOUT_TOWERINFO ) );
     se -> registerSubsystem( trc );
 
-    std::string rho_eta_calib_path = Form(
-        "/sphenix/user/tmengel/dijet-ana-auau/macros/rho_calib/calibs/rho_calib_%d.root", run_number );
-    if ( !gSystem -> AccessPathName( rho_eta_calib_path.c_str() ) )
-    {
-        std::cout << "Found eta-shape calibration file for run " << run_number << ": " << rho_eta_calib_path << std::endl;
-    }
-    else
-    {
-        std::cout << "Warning: no eta-shape calibration file found for run " << run_number << ": " << rho_eta_calib_path << std::endl;
-        rho_eta_calib_path = "/sphenix/user/tmengel/dijet-ana-auau/macros/rho_calib/calibs/rho_calib_54590.root";
-        std::cout << "Using default calibration file: " << rho_eta_calib_path << std::endl;
-    }
+    // rho eta-shape calibration for this run, or the dataset default
+    // (calibrations/rho_eta/README.md)
+    const std::string rho_eta_calib_path = RhoEtaCalibLookup::GetCalibPath( run_number );
 
     auto * subrho = new SubtractTowersRhov1(  "SubtractTowersRho_CEMC_MultEmb" );
     subrho -> set_rhoNode("TowerRho_MULT_CEMC");
