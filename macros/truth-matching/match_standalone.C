@@ -639,7 +639,7 @@ int match_standalone(
                         truth_jet_eta -> at( it ), truth_jet_phi -> at( it ),
                         rho_jet_eta   -> at( ir ), rho_jet_phi   -> at( ir )
                     );
-                    if ( dr >= max_dr ) continue; // outside threshold
+                    if ( dr > max_dr ) continue; // outside threshold
 
                     truth_jet_reco_match_idx[it] = static_cast< int >( ir );
                     jet_truth_match_idx[ir] = static_cast< int >( it );

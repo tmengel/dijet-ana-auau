@@ -1,13 +1,14 @@
 
-#ifndef _DIJET_PAIR_MATCHING_FLAVOR_C_
-#define _DIJET_PAIR_MATCHING_FLAVOR_C_
+#ifndef _DIJET_PAIR_MATCHING_FLAVOR_V2_C_
+#define _DIJET_PAIR_MATCHING_FLAVOR_V2_C_
 
-// Pulls in the DijetPair namespace (Category / Prov / TruthFail / Config /
-// Result / classify) so the classification lives in exactly one place --
-// edit dijet_pair_matching.C and this macro follows automatically. The
-// include guard there keeps the extra dijet_pair_matching() entry point
-// harmless if both macros are loaded in the same ROOT session.
-#include "dijet_pair_matching.C"
+// Pulls in the DijetPairV2 namespace (Category / Prov / TruthFail /
+// Config / Result / classify) so the classification lives in exactly one
+// place -- edit dijet_pair_matching_v2.C and this macro follows
+// automatically. The include guard and namespace there are distinct from
+// dijet_pair_matching.C's, so the v1 and v2 flavor macros can be loaded
+// side by side in the same ROOT session and compared on the same input.
+#include "dijet_pair_matching_v2.C"
 
 #include <myana/AnaUtils.h>
 
@@ -22,12 +23,21 @@
 
 R__LOAD_LIBRARY( libmyana.so )
 
-// Flavor-split version of dijet_pair_matching.C: the exclusive leading
+// Flavor-split version of dijet_pair_matching_v2.C: the exclusive leading
 // truth pair (truth jets 0 and 1) is categorized with the pair-level
-// Fill / Miss / Fake / Skip / UESub scheme, then routed to one of two
+// Fill / Miss / Fake / Skip scheme, then routed to one of two
 // output files according to the hard-parton flavor of the two legs.
 //
-// This is to dijet_pair_matching.C what dijet_matching_flavor.C is to
+// V2 (inherited wholesale from dijet_pair_matching_v2.C's classify):
+// both reco dijet legs must be truth-matched, so the legs are the two
+// highest-pT accepted jets above 20 / 8 GeV that HAVE a truth match --
+// an unmatched UE jet is stepped over instead of taking a leg. kProvUE
+// and kUESub consequently never occur, and the reco dphi requirement is
+// applied in the categorization (Fill needs the right pair AND
+// back-to-back) rather than gating pair formation. The kUESub counters
+// below are kept only so the printout schema matches the v1 macro's.
+//
+// This is to dijet_pair_matching_v2.C what dijet_matching_flavor.C is to
 // dijet_matching.C. The flavor tagging is unchanged from
 // dijet_matching_flavor.C (truth_jet_flavor = PDG id of the matched
 // parton: 1-6 quark, 21 gluon, -1 unmatched -- the leading_dijet_flavor.C
@@ -37,20 +47,19 @@ R__LOAD_LIBRARY( libmyana.so )
 // What IS new relative to dijet_matching_flavor.C:
 //   - one row per event (pair-level) instead of one row per leg, since a
 //     dijet response is a pair-level object;
-//   - the reco dijet is the leading/subleading ACCEPTED reco jets, so a UE
-//     fluctuation that has taken a leg is visible;
-//   - kUESub keeps those pairs out of Fill, Miss AND Fake;
+//   - the reco dijet is the leading/subleading accepted TRUTH-MATCHED reco
+//     jets, so a UE fluctuation cannot take a leg;
 //   - truth_fail / reco_prov bookkeeping is written out.
-// See dijet_pair_matching.C for the full description of all of the above.
+// See dijet_pair_matching_v2.C for the full description of all of the above.
 //
 // Flavor is taken from the two leading TRUTH jets, which is the same pair
 // the classification uses -- so the flavor tag is well defined for every
 // row including Fake and Skip, where the reco legs may be different jets
 // entirely. reco_prov1/2 tell you what the reco legs actually were.
-int dijet_pair_matching_flavor(
+int dijet_pair_matching_flavor_v2(
     const std::string & infile = "output.root",
-    const std::string & outfile_qq    = "dijet_pair_matching_qq.root",
-    const std::string & outfile_qg_gg = "dijet_pair_matching_qg_gg.root",
+    const std::string & outfile_qq    = "dijet_pair_matching_v2_qq.root",
+    const std::string & outfile_qg_gg = "dijet_pair_matching_v2_qg_gg.root",
     const bool sublead_back_to_back = false
 )
 {
@@ -213,9 +222,15 @@ int dijet_pair_matching_flavor(
         int   legs_swapped = 0, n_accepted_reco = 0;
 
         long  n_events = 0;
-        long  n_cat[5] = { 0, 0, 0, 0, 0 };
+        // one slot per Category, kFakeMiss (5) included -- sizing this to
+        // the number of categories is load-bearing, ++n_cat[r.category]
+        // indexes it with the raw enum value.
+        long  n_cat[6] = { 0, 0, 0, 0, 0, 0 };
         long  n_swapped = 0;
         long  n_ue_by_unmatched = 0, n_ue_by_other_truth = 0;
+        // kFakeMiss: which reco leg is not the truth leg it should be
+        long  n_fm_lead_wrong = 0, n_fm_sub_wrong = 0, n_fm_both_wrong = 0;
+        long  n_fm_legs_other_truth = 0;
     };
 
     // Books into an already-constructed Output, rather than returning one
@@ -292,7 +307,7 @@ int dijet_pair_matching_flavor(
     book_output( out_qq, outfile_qq );
     book_output( out_qg_gg, outfile_qg_gg );
 
-    DijetPair::Config cfg;
+    DijetPairV2::Config cfg;
     cfg.sublead_back_to_back = sublead_back_to_back;
 
     long n_events_unmatched_flavor = 0;
@@ -316,8 +331,8 @@ int dijet_pair_matching_flavor(
         }
         Output & out = is_qq ? out_qq : out_qg_gg;
 
-        DijetPair::Result r;
-        if ( !DijetPair::classify(
+        DijetPairV2::Result r;
+        if ( !DijetPairV2::classify(
                  *truth_jet_pT, *truth_jet_phi, *truth_jet_accept_eta, *truth_jet_reco_match_idx,
                  *jet_pT, *jet_phi, *jet_E, *jet_accept_eta, *jet_truth_match_idx,
                  cfg, r ) )
@@ -329,12 +344,29 @@ int dijet_pair_matching_flavor(
         ++out.n_cat[ r.category ];
         out.n_swapped += r.legs_swapped;
 
-        if ( r.category == DijetPair::kUESub )
+        if ( r.category == DijetPairV2::kUESub )
         {
             for ( int leg = 0; leg < 2; ++leg )
             {
-                if ( r.reco_prov[leg] == DijetPair::kProvUE )         ++out.n_ue_by_unmatched;
-                if ( r.reco_prov[leg] == DijetPair::kProvOtherTruth ) ++out.n_ue_by_other_truth;
+                if ( r.reco_prov[leg] == DijetPairV2::kProvUE )         ++out.n_ue_by_unmatched;
+                if ( r.reco_prov[leg] == DijetPairV2::kProvOtherTruth ) ++out.n_ue_by_other_truth;
+            }
+        }
+        else if ( r.category == DijetPairV2::kFakeMiss )
+        {
+            // truth pair and reco dijet candidate both in acceptance, but
+            // the candidate is not the truth pair -- a fake AND a miss.
+            const bool lead_ok = ( r.reco_prov[0] == DijetPairV2::kProvLead
+                                || r.reco_prov[0] == DijetPairV2::kProvSub );
+            const bool sub_ok  = ( r.reco_prov[1] == DijetPairV2::kProvLead
+                                || r.reco_prov[1] == DijetPairV2::kProvSub );
+            if      ( !lead_ok && !sub_ok ) ++out.n_fm_both_wrong;
+            else if ( !lead_ok )            ++out.n_fm_lead_wrong;
+            else                            ++out.n_fm_sub_wrong;
+
+            for ( int leg = 0; leg < 2; ++leg )
+            {
+                if ( r.reco_prov[leg] == DijetPairV2::kProvOtherTruth ) ++out.n_fm_legs_other_truth;
             }
         }
 
@@ -419,10 +451,19 @@ int dijet_pair_matching_flavor(
                   << ", Miss: " << out -> n_cat[1]
                   << ", Fake: " << out -> n_cat[2]
                   << ", Skip: " << out -> n_cat[3]
-                  << ", UESub: " << out -> n_cat[4] << std::endl;
+                  << ", UESub: " << out -> n_cat[4]
+                  << ", FakeMiss: " << out -> n_cat[5] << std::endl;
         std::cout << "         swapped Fills: " << out -> n_swapped
                   << " | UESub legs taken by an unmatched (UE) jet: " << out -> n_ue_by_unmatched
                   << ", by a softer truth jet: " << out -> n_ue_by_other_truth << std::endl;
+        std::cout << "         FakeMiss wrong leg -- leading: " << out -> n_fm_lead_wrong
+                  << ", subleading: " << out -> n_fm_sub_wrong
+                  << ", both: " << out -> n_fm_both_wrong
+                  << " | legs held by a softer truth jet: " << out -> n_fm_legs_other_truth
+                  << std::endl;
+        std::cout << "         misses (Miss + FakeMiss): " << ( out -> n_cat[1] + out -> n_cat[5] )
+                  << " | fakes (Fake + FakeMiss): " << ( out -> n_cat[2] + out -> n_cat[5] )
+                  << std::endl;
 
         out -> file -> cd();
         out -> tree -> Write();
