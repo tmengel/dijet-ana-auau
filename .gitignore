@@ -1,8 +1,15 @@
 # install
 install/
 
+#things to ignore
 macros/jesjer
 macros/rho_calib
+macros/sumeT_mb
+macros/unfolding
+
+*.pdf
+
+rootfiles/
 
 src/coresoftware/
 # for dstlists
