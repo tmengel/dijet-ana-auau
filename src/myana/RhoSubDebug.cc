@@ -1253,6 +1253,10 @@ int RhoSubDebug::End(PHCompositeNode * /*topNode*/)
     TNamed("label_bkgd_seeds", m_label_bkgd.c_str()).Write();
     TNamed("label_bkgd_seeds_it1", m_label_bkgd_it1.c_str()).Write();
     TNamed("seed_share_dR", Form("%g", m_seed_share_dR)).Write();
+    // the actual cut this run used, so plotting can draw it correctly instead of
+    // assuming the historical 0.7 default
+    TNamed("jet_abs_eta", Form("%g", m_abs_jet_eta_range)).Write();
+    TNamed("input_abs_eta", Form("%g", m_abs_input_eta_range)).Write();
     m_file->Write();
     m_file->Close();
     m_file = nullptr;

@@ -1,5 +1,5 @@
-#ifndef _FUN4ALL_DIJETS_AUAU_C_
-#define _FUN4ALL_DIJETS_AUAU_C_
+#ifndef _FUN4ALL_DIJETS_SIM_C_
+#define _FUN4ALL_DIJETS_SIM_C_
 
 #include <GlobalVariables.C>
 
@@ -68,122 +68,85 @@ R__LOAD_LIBRARY( libjetbackground.so )
 R__LOAD_LIBRARY( libmyana.so )
 
 
-TowerJetInput * GetTowerInput(
-    const Jet::SRC src,
-    const std::string & prefix = "TOWERINFO_CALIB"
+TowerJetInput * GetTowerInput( 
+    const Jet::SRC src, 
+    const std::string & prefix = "TOWERINFO_CALIB" 
 );
 
-void Fun4All_Dijets_AuAu (
-    const int nEvents                    = 3,
-    const std::string & infile_calo      = "DST_CALOFITTING_run2auau_pro001_pcdb001_v001-00054912-00000.root",
-    const std::string & infile_zdc       = "DST_ZDC_RAW_run2auau_pro001_pcdb001_v001-00054912-00000.root",
-    const std::string & infile_sepd      = "DST_SEPD_RAW_run2auau_pro001_pcdb001_v001-00054912-00000.root",
-    const std::string & outfile_ana      = "output_ana.root",
-    const std::string & cdbtag           = "newcdbtag"
+// jet10_hijing  jet20_hijing  jet30_hijing  mb_hijing
+// [tmengel@sphnxuser02 dsts]$ cd jet10_hijing/
+// [tmengel@sphnxuser02 jet10_hijing]$ ls
+// scaled  unsclaed
+// [tmengel@sphnxuser02 jet10_hijing]$ ls scaled | more
+// DST_SCALED_jet10_hijing31_pass2-00000.root
+// DST_SCALED_jet10_hijing31_pass2-00001.root
+
+void Fun4All_Dijets_Sim (
+    const int nEvents               = 10,
+    const int jetId                 = 10,
+    const std::string & infile      = "/sphenix/tg/tg01/jets/tmengel/ppg14/sim_scaling/08_14_2026_v001/dsts/jet10_hijing/scaled/DST_SCALED_jet10_hijing31_pass2-00000.root",
+    const std::string & outfile     = "sim_output_ana.root"
 )
 {
     
+    std::cout << "Fun4All_UEScaling_Pass3" << std::endl;
+
     Enable::VERBOSITY = 0;
 
-    auto runseg    = Fun4AllUtils::GetRunSegment( infile_calo );
-    int run_number = runseg.first;
-    int segment    = runseg.second;
-
-    auto * se = Fun4AllServer::instance( );
+    const std::string & cdbtag = "MDC2";
+    const int run_number = 31;
+    Enable::CDB = true;
+        
+    auto * se = Fun4AllServer::instance();
     se -> Verbosity( 1 );
 
-    auto * rc = recoConsts::instance( );
+    auto * rc = recoConsts::instance();
     rc -> set_StringFlag( "CDB_GLOBALTAG", cdbtag );
     rc -> set_uint64Flag( "TIMESTAMP", run_number );
 
     auto * cdb = CDBInterface::instance();
     cdb -> Verbosity( Enable::VERBOSITY );
-
+    
     auto * flag = new FlagHandler();
     se -> registerSubsystem( flag );
 
-    int ifile = 0;
-    for ( const auto & infile : { infile_calo, infile_zdc, infile_sepd } )
-    {
-        std::cout << "Input file " << ifile << ": " << infile << std::endl;
-        auto * input = new Fun4AllDstInputManager( Form( "DSTINPUT_%d", ifile ) );
-        input -> AddFile( infile );
-        input -> Verbosity( Enable::VERBOSITY );
-        se -> registerInputManager( input );
-        ++ifile;
-    }
+    auto * input = new Fun4AllDstInputManager( "DSTINPUT" );
+    std::cout << "\tAdding input file: " << infile << std::endl;
+    input -> AddFile( infile );
+    input -> Verbosity( Enable::VERBOSITY );
+    se -> registerInputManager( input );
 
-    CaloTowerDefs::BuilderType buildertype = CaloTowerDefs::kPRDFTowerv4;
-    
-    auto * ingeom = new Fun4AllRunNodeInputManager( "DST_GEO" );
-    auto geoLocation = CDBInterface::instance() -> getUrl( "calo_geo" );
-    ingeom -> AddFile( geoLocation );
-    se -> registerInputManager( ingeom );
-
-    auto * trig = new TriggerRunInfoReco( );
-    se -> registerSubsystem(trig);
-
-    auto * mbd = new MbdReco( );
-    se -> registerSubsystem( mbd );
-
-    auto * sepdbuilder = new CaloTowerBuilder( "SEPDBUILDER" );
-    sepdbuilder -> set_detector_type( CaloTowerDefs::SEPD );
-    sepdbuilder -> set_builder_type( buildertype );
-    sepdbuilder -> set_processing_type( CaloWaveformProcessing::TEMPLATE );
-    sepdbuilder -> set_nsamples( 12 );
-    sepdbuilder -> set_offlineflag( );
-    se -> registerSubsystem( sepdbuilder );
-
-    auto * sepd = new EpdReco( );
-    se -> registerSubsystem(sepd);
-
-    auto * caZDC = new CaloTowerBuilder( "ZDCBUILDER" );
-    caZDC -> set_detector_type( CaloTowerDefs::ZDC );
-    caZDC -> set_builder_type( buildertype );
-    caZDC -> set_processing_type( CaloWaveformProcessing::FAST );
-    caZDC -> set_nsamples( 16 );
-    caZDC -> set_offlineflag( );
-    se -> registerSubsystem( caZDC );
-
-    auto * zdc = new ZdcReco( );
-    zdc -> set_zdc1_cut( 0.0 );
-    zdc -> set_zdc2_cut( 0.0 );
-    se -> registerSubsystem( zdc );
-    
-    auto * zvtrx = new GlobalVertexReco( );
-    se -> registerSubsystem( zvtrx );
-
-    Process_Calo_Calib( ); 
-
-    auto * epreco = new EventPlaneReco( );
-    epreco -> set_inputNode( "TOWERINFO_CALIB_SEPD" );
-    epreco -> set_EventPlaneInfoNodeName( "EventplaneinfoMap" );
-    se -> registerSubsystem( epreco );
-
-    auto * mb = new MinimumBiasClassifier( );
-    se -> registerSubsystem( mb );
-
-    auto * cr = new CentralityReco( );
-    cr -> Verbosity( Enable::VERBOSITY );
-    se -> registerSubsystem( cr );
-
-    auto * rcemc = new RetowerCEMC( ); 
+    auto * rcemc = new RetowerCEMC( "RetowerCEMC" );
     rcemc -> set_towerinfo( true );
     rcemc -> set_frac_cut( 1.0 );
     rcemc -> set_do_rescale( false );
-    rcemc -> set_towerNodePrefix( "TOWERINFO_CALIB" );
+    rcemc -> set_towerNodePrefix( HIJETS::tower_prefix );
+    rcemc -> Verbosity( Enable::VERBOSITY );
     se -> registerSubsystem( rcemc );
 
-    auto * es = new EventSelector( );
+    auto * mb = new MinimumBiasClassifier(  "MinimumBiasClassifier" );
+    mb -> setIsSim( true );
+    mb -> setOverwriteScale( "/sphenix/user/dlis/Projects/centrality/cdb/calibrations/scales/cdb_centrality_scale_1.root" );
+    mb -> setOverwriteVtx( "/sphenix/user/dlis/Projects/centrality/cdb/calibrations/vertexscales/cdb_centrality_vertex_scale_1.root" );
+    mb -> Verbosity( Enable::VERBOSITY );
+    se -> registerSubsystem( mb );
+
+    auto * cr = new CentralityReco( "CentralityReco" );
+    cr -> setOverwriteScale( "/sphenix/user/dlis/Projects/centrality/cdb/calibrations/scales/cdb_centrality_scale_1.root" );
+    cr -> setOverwriteVtx( "/sphenix/user/dlis/Projects/centrality/cdb/calibrations/vertexscales/cdb_centrality_vertex_scale_1.root" );
+    cr -> setOverwriteDivs( "/sphenix/user/dlis/Projects/centrality/cdb/calibrations/divs/cdb_centrality_1.root" );
+    cr -> Verbosity( Enable::VERBOSITY );
+    se -> registerSubsystem( cr );
+
+    auto * es = new EventSelector( "EventSelector" );
     es -> Verbosity( Enable::VERBOSITY );
-    // auto * tcut = new TriggerSelect();
-    // tcut -> SetPacket( 14001 );
-    // tcut -> SelectTrigger( 10 );
-    // es -> AddCut( tcut );
-    auto * mbcut = new MinBiasCut( );
-    mbcut -> SetNodeName( "MinimumBiasInfo" );
-    es -> AddCut( mbcut );
-    es -> PrintCuts( );
+    auto * mbc = new MinBiasCut();
+    mbc -> SetNodeName( "MinimumBiasInfo" );
+    es -> AddCut( mbc );
+    // auto * zvc = new ZVertexCut( 60.0, -60.0 );
+    // zvc -> SetNodeName( "GlobalVertexMap" );
+    // es -> AddCut( zvc );
+    es -> PrintCuts();
     se -> registerSubsystem( es );
 
     auto * tjr = new JetReco( "TowerJetReco" );
@@ -266,7 +229,7 @@ void Fun4All_Dijets_AuAu (
     trc -> add_tower_input( GetTowerInput( Jet::HCALOUT_TOWERINFO ) );
     se -> registerSubsystem( trc );
 
-    const std::string rho_eta_calib_path = RhoEtaCalibLookup::GetCalibPath( run_number );
+    const std::string rho_eta_calib_path = RhoEtaCalibLookup::GetCalibPath( run_number, "scaled" );
 
     auto * subrho = new SubtractTowersRhov1(  "SubtractTowersRho_CEMC_Mult" );
     subrho -> set_rhoNode("TowerRho_MULT_CEMC");
@@ -325,13 +288,23 @@ void Fun4All_Dijets_AuAu (
             se -> registerSubsystem( jetCalib );
         }
     }
-
-    auto * anaout = new AnaTreev1( outfile_ana );
+   
+    auto * anaout = new AnaTreev1( outfile );
     anaout -> Verbosity( Enable::VERBOSITY );
     anaout -> add_zvrtx_node( "GlobalVertexMap" );
     anaout -> add_cent_node( "CentralityInfo" );
-    anaout -> add_gl1_node( "14001" );
     anaout -> add_mbd_node( "MbdOut" );
+
+    //  anaout -> add_gl1_node( "14001" );
+
+    anaout -> add_event_header( "EventHeader" );
+    if ( jetId > 0 ) 
+    {
+        anaout -> add_phHep_node( "PHHepMCGenEventMap" );
+        anaout -> add_truth_jet_node( "AntiKt_Truth_r03" );
+    }
+    
+
     anaout -> add_minbias_node( "MinimumBiasInfo" );
     anaout -> add_sub1_jet_node( "AntiKt_TowerInfo_r03_Sub1", "TowerInfoBackground_Sub2" );
     anaout -> add_sub1_jet_calib_node( "AntiKt_TowerInfo_r03_Sub1_calib" );
@@ -346,13 +319,11 @@ void Fun4All_Dijets_AuAu (
     anaout -> add_cemc_node(  "TOWERINFO_CALIB_CEMC_RETOWER" , true );
     anaout -> add_ihcal_node( "TOWERINFO_CALIB_HCALIN" , true );
     anaout -> add_ohcal_node( "TOWERINFO_CALIB_HCALOUT" , true );
-
+  
     se -> registerSubsystem( anaout );
-
+ 
     se -> run( nEvents );
-
     se -> End( );   
-
     se -> PrintTimer( );
 
     CDBInterface::instance() -> Print();
@@ -365,11 +336,11 @@ void Fun4All_Dijets_AuAu (
 
 }
 
-TowerJetInput * GetTowerInput(
-    const Jet::SRC src,
-    const std::string & prefix
-)
-{
+TowerJetInput * GetTowerInput( 
+    const Jet::SRC src, 
+    const std::string & prefix 
+) 
+{   
     auto * input = new TowerJetInput( src, prefix );
     input -> set_GlobalVertexType( GlobalVertex::MBD );
     return input;

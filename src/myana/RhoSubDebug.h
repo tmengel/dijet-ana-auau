@@ -43,6 +43,15 @@ class RhoSubDebug : public SubsysReco
 
   void set_external_kt_node(const std::string &n) { m_ext_kt_node = n; }
 
+  /// Jet-level |eta| acceptance this diagnostic's internal replication of
+  /// DetermineTowerRho's clustering uses (drives pass_eta_fj/uf, the acceptance-flip
+  /// study, and the seed pool). Must be set to whatever value the real
+  /// DetermineTowerRho instances in the macro were given via set_jet_abs_eta(), or
+  /// this diagnostic silently reimposes DetermineTowerRho's own default
+  /// (tower_abs_eta - R) instead of tracking the real configuration. Left unset
+  /// (default), that default resolution still runs in InitRun, unchanged.
+  void set_jet_abs_eta(float abseta) { m_abs_jet_eta_range = abseta; }
+
   /// Seeds of the background method being compared with DetermineTowerRho: jets in
   /// `node` whose prop_SeedItr equals `itr`. Defaults to the external kT container
   /// with itr = 1 (DetermineTowerBackgroundv1). For the iterative HIJetReco method use
