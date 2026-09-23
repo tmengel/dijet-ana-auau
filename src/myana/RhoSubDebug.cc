@@ -599,6 +599,12 @@ void RhoSubDebug::validate_saved_kt(PHCompositeNode *topNode, const std::vector<
     h_stored_rho_minus_node[lay]->Fill(rho_diff);
     m_max_stored_rho_diff = std::max(m_max_stored_rho_diff, std::abs(rho_diff));
 
+    // the container also holds the omitted seeds, flagged with prop_SeedItr = 1;
+    // only the jets that entered rho are compared with the replication
+    const bool has_seed_flag = jc->has_property(Jet::PROPERTY::prop_SeedItr);
+    const Jet::PROPERTY seed_idx = has_seed_flag ? jc->property_index(Jet::PROPERTY::prop_SeedItr)
+                                                 : Jet::PROPERTY::no_property;
+
     long nsaved = 0;
     int nmatch = 0;
     double worst = 0.0;
@@ -606,6 +612,7 @@ void RhoSubDebug::validate_saved_kt(PHCompositeNode *topNode, const std::vector<
     for (auto *j : *jc)
     {
       if (!j) { continue; }
+      if (has_seed_flag && j->get_property(seed_idx) > 0.5F) { continue; }
       nsaved++;
       m_n_saved_kt++;
 

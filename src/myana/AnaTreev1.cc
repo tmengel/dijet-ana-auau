@@ -281,6 +281,28 @@ int AnaTreev1::Init( PHCompositeNode * /*topNode*/ )
         }
     }
 
+    if ( m_kt_nodes.size() > 0 )
+    {
+        // sized once here: the branches keep the addresses of these elements
+        m_kt_jet_E.resize( m_kt_nodes.size() );
+        m_kt_jet_phi.resize( m_kt_nodes.size() );
+        m_kt_jet_eta.resize( m_kt_nodes.size() );
+        m_kt_jet_pT.resize( m_kt_nodes.size() );
+        m_kt_jet_ncomp.resize( m_kt_nodes.size() );
+        m_kt_jet_seed.resize( m_kt_nodes.size() );
+        m_kt_jet_signed_eT.resize( m_kt_nodes.size() );
+        for ( size_t i = 0; i < m_kt_nodes.size(); ++i )
+        {
+            m_tree -> Branch( Form( "%s_E", m_kt_nodes[i].c_str() ), &m_kt_jet_E[i] );
+            m_tree -> Branch( Form( "%s_phi", m_kt_nodes[i].c_str() ), &m_kt_jet_phi[i] );
+            m_tree -> Branch( Form( "%s_eta", m_kt_nodes[i].c_str() ), &m_kt_jet_eta[i] );
+            m_tree -> Branch( Form( "%s_pT", m_kt_nodes[i].c_str() ), &m_kt_jet_pT[i] );
+            m_tree -> Branch( Form( "%s_ncomp", m_kt_nodes[i].c_str() ), &m_kt_jet_ncomp[i] );
+            m_tree -> Branch( Form( "%s_seed", m_kt_nodes[i].c_str() ), &m_kt_jet_seed[i] );
+            m_tree -> Branch( Form( "%s_signed_eT", m_kt_nodes[i].c_str() ), &m_kt_jet_signed_eT[i] );
+        }
+    }
+
   
     if ( Verbosity () > 0 )
     {
@@ -940,6 +962,40 @@ int AnaTreev1::process_event( PHCompositeNode *topNode )
         }
         m_rho_vals[irho] = rho_node->get_rho();
         m_rho_sigmas[irho] = rho_node->get_sigma();
+    }
+
+    for ( size_t ikt = 0; ikt < m_kt_nodes.size(); ++ikt )
+    {
+        m_kt_jet_E[ikt].clear();
+        m_kt_jet_phi[ikt].clear();
+        m_kt_jet_eta[ikt].clear();
+        m_kt_jet_pT[ikt].clear();
+        m_kt_jet_ncomp[ikt].clear();
+        m_kt_jet_seed[ikt].clear();
+        m_kt_jet_signed_eT[ikt].clear();
+
+        auto * jets = findNode::getClass<JetContainer>( topNode, m_kt_nodes[ikt] );
+        if ( !jets )
+        {
+            std::cout << PHWHERE << " Input node " << m_kt_nodes[ikt] << " Node missing, Abort!" << std::endl;
+            return Fun4AllReturnCodes::ABORTRUN;
+        }
+
+        const bool has_seed = jets->has_property( Jet::PROPERTY::prop_SeedItr );
+        const bool has_signed = jets->has_property( Jet::PROPERTY::prop_SeedD );
+        const Jet::PROPERTY seed_idx = has_seed ? jets->property_index( Jet::PROPERTY::prop_SeedItr ) : Jet::PROPERTY::no_property;
+        const Jet::PROPERTY signed_idx = has_signed ? jets->property_index( Jet::PROPERTY::prop_SeedD ) : Jet::PROPERTY::no_property;
+
+        for ( const auto & jet : * jets )
+        {
+            m_kt_jet_E[ikt].push_back( jet->get_e() );
+            m_kt_jet_eta[ikt].push_back( jet->get_eta() );
+            m_kt_jet_phi[ikt].push_back( jet->get_phi() );
+            m_kt_jet_pT[ikt].push_back( jet->get_pt() );
+            m_kt_jet_ncomp[ikt].push_back( static_cast<int>( jet->size_comp() ) );
+            m_kt_jet_seed[ikt].push_back( has_seed ? static_cast<int>( std::lround( jet->get_property( seed_idx ) ) ) : -999 );
+            m_kt_jet_signed_eT[ikt].push_back( has_signed ? jet->get_property( signed_idx ) : -999.0F );
+        }
     }
 
     if ( !m_cemc_node.empty() )

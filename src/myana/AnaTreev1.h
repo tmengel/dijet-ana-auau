@@ -79,6 +79,16 @@ class AnaTreev1 : public SubsysReco
 
   void add_jet_node ( const std::string & node ) { m_jet_node = node; }
 
+  // background kT jets saved by DetermineTowerRho::add_method( ..., jet_node ),
+  // one call per node (e.g. Kt_TowerRho_CEMC_r04). Branches are
+  // <node>_E/eta/phi/pT/ncomp, plus <node>_seed (prop_SeedItr: 1 = omitted as a
+  // seed, 0 = entered rho) and <node>_signed_eT (prop_SeedD: signed sum of the
+  // constituent E_T); both are -999 if the container does not carry them
+  void add_kt_node ( const std::string & node )
+  {
+    m_kt_nodes.push_back( node );
+  }
+
   void add_cemc_node ( const std::string & node  , const bool b = true )
   {
     m_cemc_node = node;
@@ -247,6 +257,16 @@ class AnaTreev1 : public SubsysReco
   std::vector< std::string > m_rho_nodes {};
   std::vector< float > m_rho_vals {};
   std::vector< float > m_rho_sigmas {};
+
+  // per-layer background kT jets, indexed like m_kt_nodes
+  std::vector< std::string > m_kt_nodes {};
+  std::vector< std::vector < float > > m_kt_jet_E {};
+  std::vector< std::vector < float > > m_kt_jet_phi {};
+  std::vector< std::vector < float > > m_kt_jet_eta {};
+  std::vector< std::vector < float > > m_kt_jet_pT {};
+  std::vector< std::vector < int > > m_kt_jet_ncomp {};
+  std::vector< std::vector < int > > m_kt_jet_seed {};
+  std::vector< std::vector < float > > m_kt_jet_signed_eT {};
 
   // towers backing one calorimeter layer (0 = CEMC retower, 1 = HCALIN, 2 = HCALOUT)
   struct LayerTowers
